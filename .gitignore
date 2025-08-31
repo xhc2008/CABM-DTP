@@ -1,0 +1,35 @@
+# 依赖目录
+__pycache__/
+*.pyc
+node_modules/
+vendor/
+.venv/
+venv/
+debug/
+
+# 编译输出
+dist/
+build/
+*.o
+*.class
+log.txt
+# 运行时文件
+*.log
+*.pid
+.env
+.env.local
+.env.production
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 编辑器目录
+.vscode/
+.idea/
+
+# 你的特定证书和密钥文件（请根据实际情况填写！）
+private.key
+certificate.crt
+*.pem
+config/credentials.json
