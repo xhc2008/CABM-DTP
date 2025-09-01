@@ -311,7 +311,7 @@ class ChatService:
                             # 当工具名称首次出现时，显示工具调用信息
                             if tool_call['function'].get('name') and index not in displayed_tool_calls:
                                 function_name = tool_call['function']['name']
-                                yield f"\n工具调用：{function_name}"
+                                yield f"\n工具调用：{function_name}\n"
                                 displayed_tool_calls.add(index)
                         else:
                             # 累加参数
