@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import (QWidget, QLineEdit, QVBoxLayout, 
-                             QHBoxLayout, QFrame)
+                             QHBoxLayout, QFrame, QApplication)
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QFont
 from config import InputConfig
@@ -14,6 +14,9 @@ class InputWindow(QWidget):
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setFixedSize(InputConfig.WINDOW_WIDTH, InputConfig.WINDOW_HEIGHT)
+        
+        # 安装全局事件过滤器来检测点击其他地方
+        QApplication.instance().installEventFilter(self)
         
         self.setup_ui()
         
@@ -103,3 +106,31 @@ class InputWindow(QWidget):
         super().showEvent(event)
         # 立即更新位置
         self.update_position()
+        
+    def eventFilter(self, obj, event):
+        """全局事件过滤器 - 检测点击其他地方"""
+        if event.type() == event.MouseButtonPress:
+            # 检查点击是否在输入窗口或选项栏之外
+            if self.isVisible():
+                click_pos = event.globalPos()
+                input_rect = self.geometry()
+                
+                # 检查是否点击在输入窗口内
+                if not input_rect.contains(click_pos):
+                    # 检查是否点击在选项栏内（如果存在）
+                    options_panel = getattr(self.parent_pet, 'options_panel', None)
+                    if options_panel and options_panel.isVisible():
+                        options_rect = options_panel.geometry()
+                        if not options_rect.contains(click_pos):
+                            self.close()
+                            if options_panel:
+                                options_panel.close()
+                    else:
+                        self.close()
+        
+        return super().eventFilter(obj, event)
+        
+    def closeEvent(self, event):
+        """关闭事件 - 移除事件过滤器"""
+        QApplication.instance().removeEventFilter(self)
+        super().closeEvent(event)

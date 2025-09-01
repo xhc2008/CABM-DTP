@@ -4,6 +4,7 @@ from PyQt5.QtCore import Qt, QPoint, QTimer, pyqtSignal, QThread
 from PyQt5.QtGui import QPixmap, QMouseEvent, QFont
 from .input_window import InputWindow
 from .message_bubble import MessageBubble
+from .options_panel import OptionsPanel
 import os
 from dotenv import load_dotenv
 from services.chat import ChatService
@@ -37,6 +38,7 @@ class DesktopPet(QWidget):
         super().__init__()
         self.drag_position = QPoint()
         self.input_window = None
+        self.options_panel = None
         self.message_bubble = None
         self.current_text = ""
         self.full_text = ""
@@ -168,11 +170,13 @@ class DesktopPet(QWidget):
         """更新所有跟随窗口的位置"""
         if self.input_window and self.input_window.isVisible():
             self.input_window.update_position()
+        if self.options_panel and self.options_panel.isVisible():
+            self.options_panel.update_position()
         if self.message_bubble and self.message_bubble.isVisible():
             self.message_bubble.update_position()
             
     def show_input_window(self):
-        """显示输入窗口"""
+        """显示输入窗口和选项栏"""
         # 隐藏之前的消息气泡
         if self.message_bubble:
             self.message_bubble.close()
@@ -183,10 +187,21 @@ class DesktopPet(QWidget):
             self.input_window = InputWindow(self)
             self.input_window.message_sent.connect(self.handle_message)
             
+        # 创建或显示选项栏
+        if not self.options_panel:
+            self.options_panel = OptionsPanel(self)
+            self.options_panel.exit_requested.connect(self.close_application)
+            self.options_panel.hide_requested.connect(self.hide_panels)
+            
         # 更新并显示位置
         self.input_window.update_position()
+        self.options_panel.update_position()
+        
         self.input_window.show()
+        self.options_panel.show()
+        
         self.input_window.raise_()
+        self.options_panel.raise_()
         self.input_window.focus_input()
         
     def handle_message(self, message):
@@ -278,12 +293,54 @@ class DesktopPet(QWidget):
             self.ai_response_ready.emit(random.choice('\n'+SystemConfig.BACKUP_RESPONSES))
             print(e)
 
+    def close_application(self):
+        """关闭应用程序"""
+        import os
+        import sys
+        
+        # 确保所有子窗口都关闭
+        if self.input_window:
+            self.input_window.close()
+        if self.options_panel:
+            self.options_panel.close()
+        if self.message_bubble:
+            self.message_bubble.close()
+            
+        # 停止所有定时器和线程
+        if hasattr(self, 'move_timer') and self.move_timer:
+            self.move_timer.stop()
+        if hasattr(self, 'ai_thread') and self.ai_thread and self.ai_thread.isRunning():
+            self.ai_thread.terminate()
+            self.ai_thread.wait()
+            
+        # 关闭主窗口
+        self.close()
+        
+        # 退出整个应用程序
+        from PyQt5.QtWidgets import QApplication
+        app = QApplication.instance()
+        if app:
+            app.quit()
+            
+        # 强制退出Python进程（确保后台进程也关闭）
+        try:
+            os._exit(0)
+        except:
+            sys.exit(0)
+        
+    def hide_panels(self):
+        """隐藏输入框和选项栏"""
+        if self.input_window:
+            self.input_window.close()
+        if self.options_panel:
+            self.options_panel.close()
+
     def closeEvent(self, event):
         """关闭事件"""
         # 停止定时器
-        if hasattr(self, 'move_timer'):
+        if hasattr(self, 'move_timer') and self.move_timer:
             self.move_timer.stop()
-        if hasattr(self, 'timer') and self.timer:
+        if hasattr(self, 'timer') and hasattr(self, 'timer') and self.timer:
             self.timer.stop()
         
         # 停止AI线程
@@ -294,6 +351,13 @@ class DesktopPet(QWidget):
         # 关闭子窗口
         if self.input_window:
             self.input_window.close()
+        if self.options_panel:
+            self.options_panel.close()
         if self.message_bubble:
             self.message_bubble.close()
+            
+        # 确保应用程序完全退出
+        from PyQt5.QtWidgets import QApplication
+        QApplication.instance().quit()
+        
         event.accept()

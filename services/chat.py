@@ -357,7 +357,7 @@ class ChatService:
                 messages.extend(tool_responses)
                 
                 # 显示工具执行完成提示
-                yield "\n正在处理工具结果..."
+                #yield "正在处理工具结果...\n"
                 
                 # 如果有工具调用，继续循环处理
                 continue

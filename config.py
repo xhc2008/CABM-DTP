@@ -71,17 +71,49 @@ class BubbleConfig:
 class InputConfig:
     """输入窗口相关配置"""
     # 窗口大小
-    WINDOW_WIDTH = 300
+    WINDOW_WIDTH = 250
     WINDOW_HEIGHT = 70
     
     # 输入框配置
-    INPUT_HEIGHT = 30
+    INPUT_HEIGHT = 35
     BUTTON_WIDTH = 60
     BUTTON_HEIGHT = 30
     
     # 窗口位置偏移
-    WINDOW_OFFSET_X = 0  # 相对于宠物的X偏移
-    WINDOW_OFFSET_Y = -10  # 相对于宠物的Y偏移
+    WINDOW_OFFSET_X = -50  # 相对于宠物的X偏移
+    WINDOW_OFFSET_Y = -15  # 相对于宠物的Y偏移
+
+
+# 选项栏配置
+class OptionsConfig:
+    """选项栏相关配置"""
+    # 窗口大小
+    PANEL_WIDTH = 80
+    PANEL_HEIGHT = 150
+    
+    # 位置配置
+    PANEL_OFFSET_X = 30  # 相对于宠物右侧的X偏移
+    PANEL_OFFSET_Y = 100  # 相对于宠物的Y偏移
+    
+    # 按钮配置
+    BUTTON_HEIGHT = 6
+    BUTTON_SPACING = 4
+    
+    # 样式配置
+    BACKGROUND_COLOR = "rgba(240, 248, 255, 0.95)"  # 背景色
+    BORDER_COLOR = "#81D4FA"  # 边框颜色
+    BORDER_RADIUS = 12  # 圆角半径
+    
+    # 字体配置
+    TITLE_FONT_SIZE = 8
+    BUTTON_FONT_SIZE = 8
+    
+    # 按钮颜色配置
+    NORMAL_BUTTON_COLOR = "white"
+    HOVER_BUTTON_COLOR = "#E3F2FD"
+    PRESSED_BUTTON_COLOR = "#BBDEFB"
+    EXIT_BUTTON_COLOR = "#d32f2f"  # 退出按钮文字颜色
+    EXIT_BUTTON_HOVER_BG = "#ffebee"  # 退出按钮悬停背景色
 
 
 # 系统配置
@@ -108,5 +140,6 @@ __all__ = [
     'PetConfig', 
     'BubbleConfig',
     'InputConfig',
+    'OptionsConfig',
     'SystemConfig'
 ]
