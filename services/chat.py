@@ -1,10 +1,10 @@
 import json
 import requests
 import re
+import os
+import importlib.util
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Iterator
-from tools.execute_safe_command import execute_safe_command
-from tools.read_txt_file import read_text_file
 from config import ChatConfig
 
 
@@ -17,17 +17,98 @@ class ChatService:
         self.model = model
         self.conversation_history: List[Dict[str, str]] = []
         
-        # 注册可用工具
-        self.available_tools = {
-            "execute_safe_command": execute_safe_command,
-            "read_text_file": read_text_file
-        }
-        
-        # 构建工具定义列表
+        # 动态注册tools/目录下的所有工具
+        self.available_tools = {}
         self.tools = []
-        for tool_name, tool_func in self.available_tools.items():
-            if hasattr(tool_func, 'tool_definition'):
-                self.tools.append(tool_func.tool_definition)
+        print("开始加载工具...")
+        self._load_tools_from_directory()
+        print(f"工具加载完成，共加载 {len(self.available_tools)} 个工具")
+    
+    def _load_tools_from_directory(self):
+        """从tools/目录动态加载所有工具"""
+        tools_dir = "tools"
+        successful_tools = []
+        failed_tools = []
+        
+        print(f"检查工具目录: {tools_dir}")
+        if not os.path.exists(tools_dir):
+            print(f"工具目录 {tools_dir} 不存在")
+            self._log_tool_info(f"工具目录 {tools_dir} 不存在")
+            return
+        
+        print(f"工具目录存在，开始扫描.py文件...")
+        
+        # 遍历tools目录下的所有.py文件
+        all_files = os.listdir(tools_dir)
+        print(f"目录中的所有文件: {all_files}")
+        
+        for filename in all_files:
+            print(f"检查文件: {filename}")
+            if filename.endswith('.py') and not filename.startswith('__'):
+                tool_name = filename[:-3]  # 去掉.py扩展名
+                file_path = os.path.join(tools_dir, filename)
+                print(f"尝试加载工具: {tool_name} from {file_path}")
+                
+                try:
+                    # 动态导入模块
+                    spec = importlib.util.spec_from_file_location(tool_name, file_path)
+                    if spec is None or spec.loader is None:
+                        failed_tools.append(f"{tool_name}: 无法创建模块规范")
+                        continue
+                    
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
+                    
+                    # 检查模块是否有对应的函数和tool_definition
+                    if hasattr(module, tool_name):
+                        tool_func = getattr(module, tool_name)
+                        
+                        # 检查函数是否有tool_definition属性
+                        if hasattr(tool_func, 'tool_definition'):
+                            self.available_tools[tool_name] = tool_func
+                            self.tools.append(tool_func.tool_definition)
+                            successful_tools.append(tool_name)
+                        else:
+                            failed_tools.append(f"{tool_name}: 缺少tool_definition属性")
+                    else:
+                        failed_tools.append(f"{tool_name}: 模块中没有找到同名函数")
+                        
+                except Exception as e:
+                    failed_tools.append(f"{tool_name}: 加载失败 - {str(e)}")
+        
+        # 记录工具注册结果到日志
+        self._log_tool_registration_result(successful_tools, failed_tools)
+    
+    def _log_tool_info(self, message: str):
+        """记录工具信息到日志文件"""
+        try:
+            with open("log.txt", "a", encoding="utf-8") as f:
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                f.write(f"[{timestamp}] 工具加载: {message}\n")
+        except Exception:
+            pass  # 静默处理日志写入失败
+    
+    def _log_tool_registration_result(self, successful_tools: List[str], failed_tools: List[str]):
+        """记录工具注册结果"""
+        try:
+            with open("log.txt", "a", encoding="utf-8") as f:
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                f.write(f"\n{'='*50}\n")
+                f.write(f"[{timestamp}] 工具注册结果:\n")
+                
+                if successful_tools:
+                    f.write(f"✓ 成功注册的工具 ({len(successful_tools)}个): {', '.join(successful_tools)}\n")
+                else:
+                    f.write("✗ 没有成功注册任何工具\n")
+                
+                if failed_tools:
+                    f.write(f"✗ 跳过的工具 ({len(failed_tools)}个):\n")
+                    for failed in failed_tools:
+                        f.write(f"  - {failed}\n")
+                
+                f.write(f"{'='*50}\n\n")
+        except Exception:
+            pass  # 静默处理日志写入失败
     
     def add_message(self, role: str, content: str):
         """添加消息到对话历史"""
@@ -37,15 +118,34 @@ class ChatService:
         if len(self.conversation_history) > ChatConfig.MAX_CONVERSATION_HISTORY:
             self.conversation_history = self.conversation_history[-ChatConfig.MAX_CONVERSATION_HISTORY:]
     
-    def log_request_response(self, request_data: Dict[str, Any], response_data: str):
+    def log_request_response(self, request_data: Dict[str, Any], response_data: str, parsed_response: Optional[Dict[str, Any]] = None):
         """记录请求和响应到日志文件"""
         try:
             with open("log.txt", "a", encoding="utf-8") as f:
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 f.write(f"\n{'='*50}\n")
                 f.write(f"时间: {timestamp}\n")
-                f.write(f"请求:\n{json.dumps(request_data, ensure_ascii=False, indent=2)}\n")
-                f.write(f"响应:\n{response_data}\n")
+                
+                # 记录原始请求的message字段
+                if "messages" in request_data:
+                    f.write(f"请求消息:\n")
+                    for msg in request_data["messages"]:
+                        f.write(f"  {msg['role']}: {msg['content']}\n")
+                
+                # 记录合并后的原始响应message
+                if parsed_response:
+                    f.write(f"响应消息:\n")
+                    if "content" in parsed_response:
+                        f.write(f"  内容: {parsed_response['content']}\n")
+                    
+                    # 如果响应包含工具调用，显示工具调用信息
+                    if "tool_calls" in parsed_response:
+                        for tool_call in parsed_response["tool_calls"]:
+                            function_name = tool_call["function"]["name"]
+                            function_args = tool_call["function"]["arguments"]
+                            f.write(f"  工具调用: {function_name}\n")
+                            f.write(f"  参数: {function_args}\n")
+                
                 f.write(f"{'='*50}\n")
         except Exception as e:
             print(f"日志记录失败: {e}")
@@ -70,9 +170,6 @@ class ChatService:
         if self.tools:
             payload["tools"] = self.tools
         
-        # 记录请求
-        self.log_request_response(payload, "")
-        
         try:
             response = requests.post(
                 f"{self.base_url}/chat/completions",
@@ -83,13 +180,12 @@ class ChatService:
             )
             response.raise_for_status()
             
-            # 收集完整响应用于日志
-            full_response = ""
+            # 收集完整响应用于日志和解析
+            parsed_response = {"content": "", "tool_calls": []}
             
             for line in response.iter_lines():
                 if line:
                     line_str = line.decode('utf-8')
-                    full_response += line_str + "\n"
                     
                     if line_str.startswith('data: '):
                         data_str = line_str[6:]  # 去掉 'data: ' 前缀
@@ -99,16 +195,46 @@ class ChatService:
                             
                         try:
                             data = json.loads(data_str)
+                            
+                            # 解析响应内容用于日志记录
+                            if 'choices' in data and len(data['choices']) > 0:
+                                choice = data['choices'][0]
+                                if 'delta' in choice:
+                                    delta = choice['delta']
+                                    if 'content' in delta and delta['content']:
+                                        parsed_response["content"] += delta['content']
+                                    if 'tool_calls' in delta and delta['tool_calls']:
+                                        # 处理工具调用的增量更新
+                                        for tool_call in delta['tool_calls']:
+                                            index = tool_call['index']
+                                            # 确保有足够的位置
+                                            while len(parsed_response["tool_calls"]) <= index:
+                                                parsed_response["tool_calls"].append({
+                                                    'id': '',
+                                                    'type': 'function',
+                                                    'function': {'name': '', 'arguments': ''}
+                                                })
+                                            
+                                            if 'id' in tool_call:
+                                                parsed_response["tool_calls"][index]['id'] = tool_call['id']
+                                            if 'type' in tool_call:
+                                                parsed_response["tool_calls"][index]['type'] = tool_call['type']
+                                            if 'function' in tool_call:
+                                                if 'name' in tool_call['function']:
+                                                    parsed_response["tool_calls"][index]['function']['name'] = tool_call['function']['name']
+                                                if 'arguments' in tool_call['function']:
+                                                    parsed_response["tool_calls"][index]['function']['arguments'] += tool_call['function']['arguments']
+                            
                             yield data
                         except json.JSONDecodeError:
                             continue
             
-            # 记录完整响应
-            self.log_request_response({}, full_response)
+            # 记录请求和解析后的响应
+            self.log_request_response(payload, "", parsed_response)
             
         except requests.exceptions.RequestException as e:
             error_msg = f"API调用失败: {str(e)}"
-            self.log_request_response({}, error_msg)
+            self.log_request_response(payload, error_msg)
             raise Exception(error_msg)
 
     def execute_tool(self, tool_name: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
@@ -137,7 +263,7 @@ class ChatService:
         messages = [
             {
                 "role": "system",
-                "content": "你是一个桌面宠物助手，可以调用工具来帮助用户。请根据用户需求选择合适的工具，并以友好、可爱的语气回复用户。回复简短、口语化，不要使用markdown。"
+                "content": ChatConfig.system_prompt
             }
         ] + self.conversation_history
         
@@ -150,6 +276,8 @@ class ChatService:
             full_content = ""
             # 用于收集工具调用
             tool_calls = {}
+            # 用于跟踪已显示的工具调用
+            displayed_tool_calls = set()
             
             # 流式调用AI API
             for chunk in self.call_ai_api_stream(messages):
@@ -179,6 +307,12 @@ class ChatService:
                                     'arguments': tool_call['function'].get('arguments', '')
                                 }
                             }
+                            
+                            # 当工具名称首次出现时，显示工具调用信息
+                            if tool_call['function'].get('name') and index not in displayed_tool_calls:
+                                function_name = tool_call['function']['name']
+                                yield f"\n工具调用：{function_name}"
+                                displayed_tool_calls.add(index)
                         else:
                             # 累加参数
                             if 'arguments' in tool_call['function']:
@@ -222,6 +356,9 @@ class ChatService:
                 # 添加工具响应到消息列表
                 messages.extend(tool_responses)
                 
+                # 显示工具执行完成提示
+                yield "\n正在处理工具结果..."
+                
                 # 如果有工具调用，继续循环处理
                 continue
             else:
@@ -232,7 +369,7 @@ class ChatService:
         
         # 如果达到最大工具调用次数，返回提示
         if tool_call_count >= max_tool_calls:
-            yield "\n\n已达到最大工具调用次数，对话结束。"
+            yield "\n已达到最大工具调用次数，对话结束。"
 
     def process_message(self, user_message: str) -> str:
         """处理用户消息并返回AI回复（非流式，保持兼容性）"""

@@ -26,7 +26,7 @@ class AIResponseThread(QThread):
             self.finished.emit()
         except Exception as e:
             import random
-            self.response_chunk.emit(random.choice(SystemConfig.BACKUP_RESPONSES))
+            self.response_chunk.emit(random.choice('\n'+SystemConfig.BACKUP_RESPONSES))
             print(f"AI回复处理错误: {e}")
 
 class DesktopPet(QWidget):
@@ -275,7 +275,7 @@ class DesktopPet(QWidget):
             self.ai_response_ready.emit(response)
         except Exception as e:
             # 出错时使用备用回复
-            self.ai_response_ready.emit(random.choice(SystemConfig.BACKUP_RESPONSES))
+            self.ai_response_ready.emit(random.choice('\n'+SystemConfig.BACKUP_RESPONSES))
             print(e)
 
     def closeEvent(self, event):

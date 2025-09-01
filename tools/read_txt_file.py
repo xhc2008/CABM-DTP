@@ -5,7 +5,7 @@ from typing import Dict, Any
 tool_definition = {
     "type": "function",
     "function": {
-        "name": "read_text_file",
+        "name": "read_txt_file",
         "description": "读取文本文件的内容",
         "parameters": {
             "type": "object",
@@ -25,7 +25,7 @@ tool_definition = {
     }
 }
 
-def read_text_file(file_path: str, max_lines: int = None) -> Dict[str, Any]:
+def read_txt_file(file_path: str, max_lines: int = None) -> Dict[str, Any]:
     """
     读取文本文件的内容
     
@@ -104,5 +104,5 @@ def read_text_file(file_path: str, max_lines: int = None) -> Dict[str, Any]:
         }
 
 # 标记为工具函数
-read_text_file.is_tool = True
-read_text_file.tool_definition = tool_definition
+read_txt_file.is_tool = True
+read_txt_file.tool_definition = tool_definition
