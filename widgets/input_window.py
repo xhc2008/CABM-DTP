@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import (QWidget, QLineEdit, QVBoxLayout,
                              QHBoxLayout, QFrame)
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QFont
+from config import InputConfig
 
 class InputWindow(QWidget):
     """输入窗口"""
@@ -12,7 +13,7 @@ class InputWindow(QWidget):
         self.parent_pet = parent_pet
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
         self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setFixedSize(220, 60)
+        self.setFixedSize(InputConfig.WINDOW_WIDTH, InputConfig.WINDOW_HEIGHT)
         
         self.setup_ui()
         
@@ -92,8 +93,8 @@ class InputWindow(QWidget):
             input_width = self.width()
             input_height = self.height()
             
-            x = pet_geometry.x() + (pet_geometry.width() - input_width) // 2
-            y = pet_geometry.y() - input_height - 10
+            x = pet_geometry.x() + (pet_geometry.width() - input_width) // 2 + InputConfig.WINDOW_OFFSET_X
+            y = pet_geometry.y() - input_height + InputConfig.WINDOW_OFFSET_Y
             
             self.move(x, y)
             

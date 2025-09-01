@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtCore import Qt, QPoint, QSize
 from PyQt5.QtGui import QPainter, QColor, QFont, QFontMetrics
+from config import BubbleConfig
 
 class MessageBubble(QWidget):
     """消息气泡窗口"""
@@ -8,11 +9,11 @@ class MessageBubble(QWidget):
         super().__init__()
         self.parent_pet = parent_pet
         self.text = ""
-        self.font = QFont("Arial", 9)
-        self.padding = 20  # 内边距
-        self.arrow_height = 15  # 箭头高度
-        self.min_width = 100  # 最小宽度
-        self.max_width = 300  # 最大宽度
+        self.font = QFont(BubbleConfig.FONT_FAMILY, BubbleConfig.FONT_SIZE)
+        self.padding = BubbleConfig.PADDING  # 内边距
+        self.arrow_height = BubbleConfig.ARROW_HEIGHT  # 箭头高度
+        self.min_width = BubbleConfig.MIN_WIDTH  # 最小宽度
+        self.max_width = BubbleConfig.MAX_WIDTH  # 最大宽度
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
         self.setAttribute(Qt.WA_TranslucentBackground)
         self._calculate_size()
@@ -68,13 +69,13 @@ class MessageBubble(QWidget):
         bubble_height = height - self.arrow_height
         
         # 绘制气泡背景
-        painter.setBrush(QColor(225, 245, 254, 230))  # 浅蓝色半透明
-        painter.setPen(QColor(179, 229, 252))
+        painter.setBrush(QColor(*BubbleConfig.BACKGROUND_COLOR))
+        painter.setPen(QColor(*BubbleConfig.BORDER_COLOR))
         painter.drawRoundedRect(5, 5, width - 10, bubble_height - 10, 10, 10)
         
         # 绘制指向箭头
-        painter.setBrush(QColor(225, 245, 254, 230))
-        painter.setPen(QColor(179, 229, 252))
+        painter.setBrush(QColor(*BubbleConfig.BACKGROUND_COLOR))
+        painter.setPen(QColor(*BubbleConfig.BORDER_COLOR))
         arrow_center = width // 2
         arrow_points = [
             QPoint(arrow_center - 8, bubble_height - 5),
@@ -84,7 +85,7 @@ class MessageBubble(QWidget):
         painter.drawPolygon(arrow_points)
         
         # 绘制文字
-        painter.setPen(QColor(0, 0, 0))
+        painter.setPen(QColor(*BubbleConfig.TEXT_COLOR))
         painter.setFont(self.font)
         text_rect = painter.boundingRect(
             self.padding // 2, self.padding // 2,
@@ -102,7 +103,7 @@ class MessageBubble(QWidget):
             bubble_height = self.height()
             
             x = pet_geometry.x() + (pet_geometry.width() - bubble_width) // 2
-            y = pet_geometry.y() - bubble_height - 20
+            y = pet_geometry.y() - bubble_height - BubbleConfig.BUBBLE_OFFSET_Y
             
             self.move(x, y)
             

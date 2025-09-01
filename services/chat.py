@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional, Iterator
 from tools.execute_safe_command import execute_safe_command
 from tools.read_txt_file import read_text_file
+from config import ChatConfig
 
 
 class ChatService:
@@ -33,8 +34,8 @@ class ChatService:
         self.conversation_history.append({"role": role, "content": content})
         
         # 限制历史记录长度，避免过长
-        if len(self.conversation_history) > 20:
-            self.conversation_history = self.conversation_history[-20:]
+        if len(self.conversation_history) > ChatConfig.MAX_CONVERSATION_HISTORY:
+            self.conversation_history = self.conversation_history[-ChatConfig.MAX_CONVERSATION_HISTORY:]
     
     def log_request_response(self, request_data: Dict[str, Any], response_data: str):
         """记录请求和响应到日志文件"""
@@ -60,8 +61,8 @@ class ChatService:
             "model": self.model,
             "messages": messages,
             "max_tokens": max_tokens,
-            "temperature": 0.7,
-            "top_p": 0.7,
+            "temperature": ChatConfig.TEMPERATURE,
+            "top_p": ChatConfig.TOP_P,
             "stream": True
         }
         
@@ -77,7 +78,7 @@ class ChatService:
                 f"{self.base_url}/chat/completions",
                 headers=headers,
                 json=payload,
-                timeout=30,
+                timeout=ChatConfig.API_TIMEOUT,
                 stream=True
             )
             response.raise_for_status()
@@ -141,7 +142,7 @@ class ChatService:
         ] + self.conversation_history
         
         # 最大工具调用轮次，防止无限循环
-        max_tool_calls = 3
+        max_tool_calls = ChatConfig.MAX_TOOL_CALLS
         tool_call_count = 0
         
         while tool_call_count < max_tool_calls:

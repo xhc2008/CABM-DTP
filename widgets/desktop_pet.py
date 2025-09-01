@@ -1,14 +1,13 @@
 import random
 from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout
-from PyQt5.QtCore import Qt, QPoint, QTimer, pyqtSignal
+from PyQt5.QtCore import Qt, QPoint, QTimer, pyqtSignal, QThread
 from PyQt5.QtGui import QPixmap, QMouseEvent, QFont
 from .input_window import InputWindow
 from .message_bubble import MessageBubble
 import os
 from dotenv import load_dotenv
 from services.chat import ChatService
-# 在文件顶部添加QThread导入
-from PyQt5.QtCore import Qt, QPoint, QTimer, pyqtSignal, QThread
+from config import PetConfig, BubbleConfig, SystemConfig
 
 # 创建一个工作线程类来处理AI响应
 class AIResponseThread(QThread):
@@ -27,12 +26,7 @@ class AIResponseThread(QThread):
             self.finished.emit()
         except Exception as e:
             import random
-            backup_responses = [
-                "抱歉，我现在遇到了一点问题，稍后再试吧~",
-                "哎呀，网络好像不太稳定，等会儿再聊吧！",
-                "我暂时无法处理这个请求，请稍后再试~"
-            ]
-            self.response_chunk.emit(random.choice(backup_responses))
+            self.response_chunk.emit(random.choice(SystemConfig.BACKUP_RESPONSES))
             print(f"AI回复处理错误: {e}")
 
 class DesktopPet(QWidget):
@@ -76,7 +70,7 @@ class DesktopPet(QWidget):
         # 定时器用于检测位置变化
         self.move_timer = QTimer()
         self.move_timer.timeout.connect(self.check_position_change)
-        self.move_timer.start(50)  # 50ms检查一次
+        self.move_timer.start(PetConfig.POSITION_CHECK_INTERVAL)
         
         self.last_position = self.pos()
         self.ai_response_ready.connect(self.append_ai_response)
@@ -105,7 +99,7 @@ class DesktopPet(QWidget):
             size = self.pixmap.size()
             self.setFixedSize(size)
         else:
-            self.setFixedSize(100, 100)
+            self.setFixedSize(PetConfig.DEFAULT_PET_WIDTH, PetConfig.DEFAULT_PET_HEIGHT)
             
         # 移动到屏幕右下角
         self.move_to_bottom_right()
@@ -113,12 +107,12 @@ class DesktopPet(QWidget):
     def load_pet_image(self):
         """加载宠物图片"""
         try:
-            self.pixmap = QPixmap("pet.png")
+            self.pixmap = QPixmap(PetConfig.PET_IMAGE_PATH)
             if not self.pixmap.isNull():
                 self.pet_label.setPixmap(self.pixmap)
                 return True
             else:
-                print("pet.png文件存在但无法加载")
+                print(f"{PetConfig.PET_IMAGE_PATH}文件存在但无法加载")
                 return False
         except Exception as e:
             print(f"加载图片失败: {e}")
@@ -131,8 +125,8 @@ class DesktopPet(QWidget):
         screen_rect = desktop.availableGeometry()
         window_size = self.size()
         
-        x = screen_rect.width() - window_size.width() - 50
-        y = screen_rect.height() - window_size.height() - 50
+        x = screen_rect.width() - window_size.width() - PetConfig.INITIAL_POSITION_OFFSET_X
+        y = screen_rect.height() - window_size.height() - PetConfig.INITIAL_POSITION_OFFSET_Y
         
         self.move(x, y)
         self.last_position = QPoint(x, y)
@@ -234,13 +228,13 @@ class DesktopPet(QWidget):
         if self.message_bubble:
             self.message_bubble.set_text(response)
             self.message_bubble.update_position()
-            # 3秒后自动隐藏
-            QTimer.singleShot(3000, self.hide_message_bubble)
+            # 自动隐藏
+            QTimer.singleShot(BubbleConfig.AUTO_HIDE_DELAY, self.hide_message_bubble)
         else:
             # 如果没有气泡，创建一个
             self.prepare_message_bubble()
             self.message_bubble.set_text(response)
-            QTimer.singleShot(3000, self.hide_message_bubble)
+            QTimer.singleShot(BubbleConfig.AUTO_HIDE_DELAY, self.hide_message_bubble)
             
     def hide_message_bubble(self):
         """隐藏消息气泡"""
@@ -265,7 +259,7 @@ class DesktopPet(QWidget):
         """AI响应完成后的处理"""
         # 流式响应完成后，设置自动隐藏定时器
         # 注意：这个定时器必须在主线程中创建
-        QTimer.singleShot(3000, self.hide_message_bubble)
+        QTimer.singleShot(BubbleConfig.AUTO_HIDE_DELAY, self.hide_message_bubble)
         
         # 清理线程
         if self.ai_thread:
@@ -281,13 +275,7 @@ class DesktopPet(QWidget):
             self.ai_response_ready.emit(response)
         except Exception as e:
             # 出错时使用备用回复
-            import random
-            backup_responses = [
-                "抱歉，我现在遇到了一点问题，稍后再试吧~",
-                "哎呀，网络好像不太稳定，等会儿再聊吧！",
-                "我暂时无法处理这个请求，请稍后再试~"
-            ]
-            self.ai_response_ready.emit(random.choice(backup_responses))
+            self.ai_response_ready.emit(random.choice(SystemConfig.BACKUP_RESPONSES))
             print(e)
 
     def closeEvent(self, event):
