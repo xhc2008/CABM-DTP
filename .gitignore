@@ -6,7 +6,8 @@ vendor/
 .venv/
 venv/
 debug/
-
+1/
+temp/
 # 编译输出
 dist/
 build/
