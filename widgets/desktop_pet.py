@@ -271,7 +271,7 @@ class DesktopPet(QWidget):
         try:
             # 显示"正在看图"提示
             if self.message_bubble:
-                self.message_bubble.set_text("查看图片...")
+                self.message_bubble.set_text("查看图片中...")
                 self.message_bubble.update_position()
             
             # 如果已有VLM线程在运行，先停止它
