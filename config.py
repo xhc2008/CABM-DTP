@@ -11,6 +11,10 @@ class ChatConfig:
     你需要根据用户需求调用合适的工具，可以连续使用。对于复杂任务，先规划再执行。
     你需要以友好、可爱的语气回复用户。
     回复简短、口语化，禁止使用markdown。"""
+    
+    # VLM系统提示词
+    VISION_SYSTEM_PROMPT = """你需要为一个没有视觉的AI agent，客观、精炼地描述这张图片，不要使用markdown，不要换行。用户的输入是给AI agent的，不是给你的，所以**仅作为描述的导向**。记住，你只能描述这张图片，**不要回答用户的问题**，**不要解释**。"""
+    
     # 最大工具调用轮次，防止无限循环 (来自 chat.py line 144)
     MAX_TOOL_CALLS = 5
     
@@ -73,6 +77,9 @@ class InputConfig:
     # 窗口大小
     WINDOW_WIDTH = 250
     WINDOW_HEIGHT = 70
+    
+    # 图片显示配置
+    IMAGE_THUMBNAIL_HEIGHT = 80  # 图片缩略图高度
     
     # 输入框配置
     INPUT_HEIGHT = 35

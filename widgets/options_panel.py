@@ -8,6 +8,7 @@ class OptionsPanel(QWidget):
     """选项栏面板"""
     exit_requested = pyqtSignal()  # 退出信号
     hide_requested = pyqtSignal()  # 隐藏信号
+    screenshot_requested = pyqtSignal()  # 截图信号
     
     def __init__(self, parent_pet):
         super().__init__()
@@ -71,6 +72,12 @@ class OptionsPanel(QWidget):
                 background-color: {OptionsConfig.PRESSED_BUTTON_COLOR};
             }}
         """
+        
+        # 截图按钮
+        self.screenshot_button = QPushButton("截图")
+        self.screenshot_button.setStyleSheet(button_style)
+        self.screenshot_button.clicked.connect(self.screenshot_requested.emit)
+        outer_layout.addWidget(self.screenshot_button)
         
         # 隐藏按钮
         self.hide_button = QPushButton("隐藏")

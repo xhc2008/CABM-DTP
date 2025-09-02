@@ -10,29 +10,38 @@ def signal_handler(signum, frame):
     QApplication.instance().quit()
 
 def main():
-    app = QApplication(sys.argv)
-    
-    # 设置应用程序属性
-    app.setApplicationName("桌面宠物")
-    app.setApplicationVersion("0.1")
-    
-    # 设置信号处理器
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
-    
-    # 创建定时器来处理Python信号（PyQt需要这样做）
-    timer = QTimer()
-    timer.start(500)  # 每500ms检查一次信号
-    timer.timeout.connect(lambda: None)  # 空操作，只是为了让Python信号能被处理
-    
-    pet = DesktopPet()
-    pet.show()
-    
-    # 确保应用程序完全退出
     try:
-        sys.exit(app.exec_())
-    except SystemExit:
-        pass
+        app = QApplication(sys.argv)
+        
+        # 设置应用程序属性
+        app.setApplicationName("桌面宠物")
+        app.setApplicationVersion("0.1")
+        
+        # 设置信号处理器
+        signal.signal(signal.SIGINT, signal_handler)
+        signal.signal(signal.SIGTERM, signal_handler)
+        
+        # 创建定时器来处理Python信号（PyQt需要这样做）
+        timer = QTimer()
+        timer.start(500)  # 每500ms检查一次信号
+        timer.timeout.connect(lambda: None)  # 空操作，只是为了让Python信号能被处理
+        
+        pet = DesktopPet()
+        pet.show()
+        
+        print("桌面宠物启动成功")
+        
+        # 确保应用程序完全退出
+        try:
+            sys.exit(app.exec_())
+        except SystemExit:
+            pass
+            
+    except Exception as e:
+        print(f"程序启动失败: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
