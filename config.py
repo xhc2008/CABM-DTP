@@ -13,7 +13,7 @@ class ChatConfig:
     回复简短、口语化，禁止使用markdown。"""
     
     # VLM系统提示词
-    VISION_SYSTEM_PROMPT = """你需要为一个没有视觉的AI agent，客观、精炼地描述这张图片，不要使用markdown，不要换行。用户的输入是给AI agent的，不是给你的，所以**仅作为描述的导向**。记住，你只能描述这张图片，**不要回答用户的问题**，**不要解释**。"""
+    VISION_SYSTEM_PROMPT = """你需要为一个没有视觉的AI agent，客观、精炼地描述这张图片，不要使用markdown。用户的输入是给AI agent的，不是给你的，所以**仅作为描述的导向**。记住，你只能描述这张图片，**不要回答用户的问题**，**不要解释**。"""
     
     # 最大工具调用轮次，防止无限循环 (来自 chat.py line 144)
     MAX_TOOL_CALLS = 5
@@ -95,7 +95,7 @@ class InputConfig:
 class OptionsConfig:
     """选项栏相关配置"""
     # 窗口大小
-    PANEL_WIDTH = 80
+    PANEL_WIDTH = 70
     PANEL_HEIGHT = 150
     
     # 位置配置
@@ -103,13 +103,13 @@ class OptionsConfig:
     PANEL_OFFSET_Y = 100  # 相对于宠物的Y偏移
     
     # 按钮配置
-    BUTTON_HEIGHT = 6
+    BUTTON_HEIGHT = 7
     BUTTON_SPACING = 4
     
     # 样式配置
     BACKGROUND_COLOR = "rgba(240, 248, 255, 0.95)"  # 背景色
     BORDER_COLOR = "#81D4FA"  # 边框颜色
-    BORDER_RADIUS = 12  # 圆角半径
+    BORDER_RADIUS = 5  # 圆角半径
     
     # 字体配置
     TITLE_FONT_SIZE = 8

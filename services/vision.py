@@ -18,7 +18,7 @@ class VisionService:
         # 从环境变量读取配置
         self.base_url = os.getenv('BASE_URL', 'https://api.siliconflow.cn/v1')
         self.api_key = os.getenv('API_KEY')
-        self.vision_model = os.getenv('VISION_MODEL', 'Qwen/Qwen2.5-VL-32B-Instruct')
+        self.vision_model = os.getenv('VISION_MODEL', '')
         
         if not self.api_key:
             raise ValueError("API_KEY not found in environment variables")

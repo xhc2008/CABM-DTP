@@ -58,7 +58,7 @@ class OptionsPanel(QWidget):
                 background-color: {OptionsConfig.NORMAL_BUTTON_COLOR};
                 border: 1px solid #B0BEC5;
                 border-radius: 6px;
-                padding: 8px;
+                padding: 3px;
                 text-align: left;
                 font-size: {OptionsConfig.BUTTON_FONT_SIZE}pt;
                 color: #333;
@@ -74,19 +74,19 @@ class OptionsPanel(QWidget):
         """
         
         # 截图按钮
-        self.screenshot_button = QPushButton("截图")
+        self.screenshot_button = QPushButton(" 截图")
         self.screenshot_button.setStyleSheet(button_style)
         self.screenshot_button.clicked.connect(self.screenshot_requested.emit)
         outer_layout.addWidget(self.screenshot_button)
         
         # 隐藏按钮
-        self.hide_button = QPushButton("隐藏")
+        self.hide_button = QPushButton(" 隐藏")
         self.hide_button.setStyleSheet(button_style)
         self.hide_button.clicked.connect(self.hide_requested.emit)
         outer_layout.addWidget(self.hide_button)
         
         # 退出按钮
-        self.exit_button = QPushButton("退出")
+        self.exit_button = QPushButton(" 退出")
         self.exit_button.setStyleSheet(button_style + f"""
             QPushButton {{
                 color: {OptionsConfig.EXIT_BUTTON_COLOR};
