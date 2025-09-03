@@ -91,7 +91,7 @@ class DesktopPet(QWidget):
         # 初始化AI聊天服务
         api_key = os.getenv("API_KEY", "your_api_key_here")  # 从环境变量获取API密钥
         base_url = os.getenv("BASE_URL", "https://api.example.com")
-        model = os.getenv("MODEL", "")
+        model = os.getenv("AGENT_MODEL", "")
         # print("api_key:", api_key)
         # print("base_url:", base_url)
         # print("model:", model)

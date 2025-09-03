@@ -142,6 +142,39 @@ class SystemConfig:
     ]
 
 
+# RAG向量数据库配置
+class RAGConfig:
+    """RAG向量数据库相关配置"""
+    # 多路召回配置
+    MULTI_RECALL_CONFIG = {
+        "Cosine_Similarity": {
+            "embed_func": "API",  # 使用API而不是本地模型
+            "embed_kwds": {
+                "base_url": None,  # 从环境变量读取
+                "api_key": None,   # 从环境变量读取
+                "model": None      # 从环境变量读取
+            },
+            "vector_dim": 1024,
+            "threshold": 0.5
+        }
+    }
+    
+    # 重排序配置
+    RERANKER_CONFIG = {
+        "reranker_func": "API",
+        "reranker_kwds": {
+            "base_url": None,  # 从环境变量读取
+            "api_key": None,   # 从环境变量读取
+            "model": None      # 从环境变量读取
+        }
+    }
+
+# 完整的RAG配置字典
+RAG_CONFIG = {
+    "Multi_Recall": RAGConfig.MULTI_RECALL_CONFIG,
+    "Reranker": RAGConfig.RERANKER_CONFIG
+}
+
 # 导出所有配置类，方便导入使用
 __all__ = [
     'ChatConfig',
@@ -149,5 +182,7 @@ __all__ = [
     'BubbleConfig',
     'InputConfig',
     'OptionsConfig',
-    'SystemConfig'
+    'SystemConfig',
+    'RAGConfig',
+    'RAG_CONFIG'
 ]
