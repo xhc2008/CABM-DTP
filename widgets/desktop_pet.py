@@ -524,7 +524,6 @@ class DesktopPet(QWidget):
         app = QApplication.instance()
         if app:
             app.quit()
-            
         # 强制退出Python进程（确保后台进程也关闭）
         try:
             os._exit(0)

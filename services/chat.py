@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional, Iterator
 from config import ChatConfig
 from .summarize import summarize_conversation_async
+from .context_builder import get_context_builder
 
 
 class ChatService:
@@ -260,11 +261,15 @@ class ChatService:
         # 添加用户消息到历史
         self.add_message("user", user_message)
         
-        # 构建消息列表，包含系统提示和对话历史
+        # 使用上下文构建器构建增强的系统提示词
+        context_builder = get_context_builder()
+        enhanced_system_prompt = context_builder.build_enhanced_system_prompt(user_message)
+        
+        # 构建消息列表，包含增强的系统提示和对话历史
         messages = [
             {
                 "role": "system",
-                "content": ChatConfig.system_prompt
+                "content": enhanced_system_prompt
             }
         ] + self.conversation_history
         
