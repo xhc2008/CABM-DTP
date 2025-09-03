@@ -8,6 +8,7 @@ venv/
 debug/
 1/
 temp/
+data/
 # 编译输出
 dist/
 build/

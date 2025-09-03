@@ -30,7 +30,15 @@ class ChatConfig:
     TEMPERATURE = 0.7
     TOP_P = 0.7
 
-
+#总结设置
+class SummaryConfig:
+    summary_prompt="""你是一个总结专家。用户输入的是用户和助手的一次对话，你需要从中提取信息。
+你的输出是一个json，包含以下字段：
+"summary" <string> 总结本次对话，不超过50字。
+"add" <string array> 精炼地列出在本次对话新出现的、助手需要长期记忆的重要操作方法、用户习惯等，每条完全独立，可以为空。
+"""
+#以后加入的功能
+#"remove" <string array> 精炼地列出在本次对话中助手需要遗忘的错误或过时记忆，可以为空。"""
 # 桌面宠物界面配置
 class PetConfig:
     """桌面宠物界面相关配置"""

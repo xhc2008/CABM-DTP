@@ -138,6 +138,10 @@ class ChatHistoryVectorDB:
         """
         if file_path is None:
             file_path = self.data_memory
+        
+        # 确保目录存在
+        os.makedirs(file_path, exist_ok=True)
+        
         rag_save = self.rag.save_to_file(file_path)
         data = {
             'character_name': self.character_name,
@@ -146,10 +150,18 @@ class ChatHistoryVectorDB:
             'last_updated': datetime.now().isoformat()
         }
         
-        with open(os.path.join(file_path, f"{self.character_name}_memory.json"), 'w', encoding='utf-8') as f:
+        # 根据character_name决定文件名
+        if self.character_name in ['memory', 'notes']:
+            # 对于summarize.py使用的特殊数据库，直接使用character_name.json
+            filename = f"{self.character_name}.json"
+        else:
+            # 对于其他数据库，使用原来的命名方式
+            filename = f"{self.character_name}_memory.json"
+        
+        with open(os.path.join(file_path, filename), 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
             
-        self.logger.info(f"向量数据库已保存到 {file_path}")
+        self.logger.info(f"向量数据库已保存到 {os.path.join(file_path, filename)}")
 
     def load_from_file(self, file_path: str = None):
         """
@@ -159,8 +171,15 @@ class ChatHistoryVectorDB:
             file_path: 加载路径，如果为None则使用默认路径
         """
         self.logger.info("加载向量数据库...")
+        
         if file_path is None:
-            file_path = os.path.join(self.data_memory, f"{self.character_name}_memory.json")
+            # 根据character_name决定文件路径
+            if self.character_name in ['memory', 'notes']:
+                # 对于summarize.py使用的特殊数据库，直接使用character_name.json
+                file_path = os.path.join(self.data_memory, f"{self.character_name}.json")
+            else:
+                # 对于其他数据库，使用原来的命名方式
+                file_path = os.path.join(self.data_memory, f"{self.character_name}_memory.json")
         
         if not os.path.exists(file_path):
             self.logger.info(f"数据库文件不存在，将创建新的数据库: {file_path}")
@@ -191,7 +210,7 @@ class ChatHistoryVectorDB:
             timestamp = datetime.now().isoformat()
         
         # 将用户消息和助手回复组合成一个对话单元（用于向量化）
-        conversation_text = f"用户: {user_message}\{self.character_name}: {assistant_message}"
+        conversation_text = f"用户: {user_message}\\{self.character_name}: {assistant_message}"
     
         self.add_text(conversation_text)
         self.logger.info(f"添加对话记录到向量数据库: {user_message[:50]}...")

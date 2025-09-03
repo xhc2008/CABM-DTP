@@ -6,6 +6,7 @@ import importlib.util
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Iterator
 from config import ChatConfig
+from .summarize import summarize_conversation_async
 
 
 class ChatService:
@@ -370,6 +371,12 @@ class ChatService:
         # 如果达到最大工具调用次数，返回提示
         if tool_call_count >= max_tool_calls:
             yield "\n已达到最大工具调用次数，对话结束。"
+        
+        # 对话完成后，异步调用总结功能
+        # 获取最终的助手回复（可能包含多轮工具调用的结果）
+        final_assistant_message = self._get_final_assistant_message()
+        all_tool_calls = self._get_all_tool_calls_from_history()
+        self._summarize_conversation_async(user_message, final_assistant_message, all_tool_calls)
 
     def process_message(self, user_message: str) -> str:
         """处理用户消息并返回AI回复（非流式，保持兼容性）"""
@@ -381,3 +388,33 @@ class ChatService:
     def clear_history(self):
         """清空对话历史"""
         self.conversation_history = []
+    
+    def _get_final_assistant_message(self) -> str:
+        """获取最终的助手回复消息"""
+        # 从对话历史中获取最后一条助手消息
+        for message in reversed(self.conversation_history):
+            if message.get("role") == "assistant" and message.get("content"):
+                return message["content"]
+        return ""
+    
+    def _get_all_tool_calls_from_history(self) -> List[Dict[str, Any]]:
+        """从对话历史中获取本轮对话的所有工具调用"""
+        tool_calls = []
+        # 从最后开始查找，直到遇到用户消息为止
+        for message in reversed(self.conversation_history):
+            if message.get("role") == "user":
+                break
+            elif message.get("role") == "assistant" and "tool_calls" in message:
+                # 将工具调用添加到列表开头，保持正确的顺序
+                tool_calls = message["tool_calls"] + tool_calls
+        return tool_calls
+    
+    def _summarize_conversation_async(self, user_message: str, assistant_message: str, tool_calls: List[Dict[str, Any]] = None):
+        """异步调用对话总结功能"""
+        try:
+            # 只有当有实际内容时才进行总结
+            if user_message and assistant_message:
+                summarize_conversation_async(user_message, assistant_message, tool_calls)
+        except Exception as e:
+            # 静默处理总结失败，不影响主要对话流程
+            print(f"总结对话时出错: {e}")
