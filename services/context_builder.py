@@ -8,7 +8,7 @@ import os
 from typing import Optional
 from .memory import ChatHistoryVectorDB
 from config import RAG_CONFIG, ChatConfig
-
+from datetime import datetime
 
 class ContextBuilder:
     """上下文构建器，负责检索记忆和笔记，构建完整的系统提示词"""
@@ -87,7 +87,12 @@ class ContextBuilder:
         
         # 保存相关笔记供总结时使用
         set_current_relevant_notes(relevant_notes)
-        
+
+        # 获取当前时间并格式化
+        current_time = datetime.now()
+        formatted_time = current_time.strftime("[%Y-%m-%d %H:%M:%S]")
+        enhanced_prompt+="\n现在的时间："+formatted_time
+
         # 添加相关记忆
         if relevant_memories:
             enhanced_prompt += "\n\n以下是相关的记忆（如有）：\n```\n"
