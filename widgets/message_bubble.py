@@ -19,48 +19,41 @@ class MessageBubble(QWidget):
         self._calculate_size()
         
     def _wrap_text(self, text, max_width):
-        """智能文本换行，支持强制换行长单词"""
+        """改进的文本换行算法，支持中英文混合和长单词"""
         font_metrics = QFontMetrics(self.font)
-        words = text.split()
         lines = []
         current_line = ""
         
-        for word in words:
-            # 检查单个单词是否过长
-            word_width = font_metrics.horizontalAdvance(word)
-            if word_width > max_width:
-                # 如果当前行不为空，先添加到结果中
-                if current_line:
-                    lines.append(current_line.strip())
-                    current_line = ""
-                
-                # 强制拆分长单词
-                char_index = 0
-                while char_index < len(word):
-                    temp_word = ""
-                    while char_index < len(word):
-                        next_char = word[char_index]
-                        test_word = temp_word + next_char
-                        if font_metrics.horizontalAdvance(test_word) > max_width and temp_word:
-                            break
-                        temp_word = test_word
-                        char_index += 1
-                    
-                    if temp_word:
-                        lines.append(temp_word)
-                continue
+        # 按字符处理，更适合中英文混合文本
+        for char in text:
+            test_line = current_line + char
+            test_width = font_metrics.horizontalAdvance(test_line)
             
-            # 检查添加这个单词后是否会超出宽度
-            test_line = current_line + (" " if current_line else "") + word
-            if font_metrics.horizontalAdvance(test_line) > max_width and current_line:
-                lines.append(current_line.strip())
-                current_line = word
-            else:
+            # 如果当前字符是换行符，直接换行
+            if char == '\n':
+                lines.append(current_line)
+                current_line = ""
+                continue
+                
+            # 检查添加字符后是否超出宽度
+            if test_width <= max_width:
                 current_line = test_line
+            else:
+                # 超出宽度时换行
+                if current_line:  # 当前行有内容
+                    lines.append(current_line)
+                
+                # 处理长字符或长单词（如果单个字符就超过宽度，强制显示）
+                if font_metrics.horizontalAdvance(char) > max_width:
+                    # 单个字符就超过宽度，特殊处理
+                    lines.append(char)
+                    current_line = ""
+                else:
+                    current_line = char
         
         # 添加最后一行
         if current_line:
-            lines.append(current_line.strip())
+            lines.append(current_line)
         
         return lines
     
@@ -73,23 +66,27 @@ class MessageBubble(QWidget):
         # 使用字体度量计算文本尺寸
         font_metrics = QFontMetrics(self.font)
         
-        # 计算文本在指定宽度范围内的尺寸
-        text_width = font_metrics.horizontalAdvance(self.text)
+        # 计算可用文本宽度（减去两倍内边距）
+        available_width = self.max_width - 2 * self.padding
         
-        # 如果文本宽度超过最大宽度，需要换行
-        if text_width > self.max_width - self.padding * 2:
-            # 使用智能换行计算高度
-            max_text_width = self.max_width - self.padding * 2
-            wrapped_lines = self._wrap_text(self.text, max_text_width)
-            text_height = len(wrapped_lines) * font_metrics.height()
-            bubble_width = self.max_width
-        else:
-            # 单行文本
-            text_height = font_metrics.height()
-            bubble_width = max(text_width + self.padding * 2, self.min_width)
+        # 使用改进的换行算法
+        wrapped_lines = self._wrap_text(self.text, available_width)
         
-        # 计算总高度（文本高度 + 内边距 + 箭头高度）
-        bubble_height = text_height + self.padding + self.arrow_height
+        # 计算最大行宽度
+        max_line_width = 0
+        for line in wrapped_lines:
+            line_width = font_metrics.horizontalAdvance(line)
+            max_line_width = max(max_line_width, line_width)
+        
+        # 计算文本总高度
+        text_height = len(wrapped_lines) * font_metrics.height()
+        
+        # 计算气泡宽度（文本最大宽度 + 两倍内边距，但不超过最大宽度）
+        bubble_width = min(max_line_width + 2 * self.padding, self.max_width)
+        bubble_width = max(bubble_width, self.min_width)  # 确保不小于最小宽度
+        
+        # 计算总高度（文本高度 + 两倍内边距 + 箭头高度）
+        bubble_height = text_height + 2 * self.padding + self.arrow_height
         
         self.resize(bubble_width, bubble_height)
     
@@ -115,16 +112,16 @@ class MessageBubble(QWidget):
         # 绘制气泡背景
         painter.setBrush(QColor(*BubbleConfig.BACKGROUND_COLOR))
         painter.setPen(QColor(*BubbleConfig.BORDER_COLOR))
-        painter.drawRoundedRect(5, 5, width - 10, bubble_height - 10, 10, 10)
+        painter.drawRoundedRect(0, 0, width, bubble_height, 10, 10)
         
         # 绘制指向箭头
         painter.setBrush(QColor(*BubbleConfig.BACKGROUND_COLOR))
         painter.setPen(QColor(*BubbleConfig.BORDER_COLOR))
         arrow_center = width // 2
         arrow_points = [
-            QPoint(arrow_center - 8, bubble_height - 5),
-            QPoint(arrow_center + 8, bubble_height - 5),
-            QPoint(arrow_center, height - 5)
+            QPoint(arrow_center - 8, bubble_height),
+            QPoint(arrow_center + 8, bubble_height),
+            QPoint(arrow_center, height)
         ]
         painter.drawPolygon(arrow_points)
         
@@ -132,19 +129,19 @@ class MessageBubble(QWidget):
         painter.setPen(QColor(*BubbleConfig.TEXT_COLOR))
         painter.setFont(self.font)
         
-        # 使用智能换行绘制文本
-        max_text_width = width - self.padding
-        wrapped_lines = self._wrap_text(self.text, max_text_width)
+        # 使用改进的换行算法
+        available_width = width - 2 * self.padding
+        wrapped_lines = self._wrap_text(self.text, available_width)
         
         font_metrics = QFontMetrics(self.font)
         line_height = font_metrics.height()
-        y_offset = self.padding // 2
+        y_offset = self.padding + font_metrics.ascent()  # 从顶部内边距开始，加上字体的上升部分
         
         for line in wrapped_lines:
-            painter.drawText(
-                self.padding // 2, y_offset + line_height,
-                line
-            )
+            # 修改：从左到右绘制文本，不再居中
+            x_offset = self.padding  # 使用固定的左边距
+            
+            painter.drawText(x_offset, y_offset, line)
             y_offset += line_height
         
     def update_position(self):

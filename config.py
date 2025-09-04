@@ -21,10 +21,10 @@ class ChatConfig:
     "read_file": "阅读文件...",
     "run_python": "手搓Python...",
     "read_notes": "正在翻小本本...",
-    "recollect": "努力回忆...",
+    "recollect": "努力回忆中...",
     }
     # 最大工具调用轮次，防止无限循环 (来自 chat.py line 144)
-    MAX_TOOL_CALLS = 7
+    MAX_TOOL_CALLS = 8
     
     # 对话历史记录最大长度
     MAX_CONVERSATION_HISTORY = 20
@@ -73,7 +73,7 @@ class BubbleConfig:
     # 气泡样式配置
     FONT_FAMILY = "Arial"
     FONT_SIZE = 9
-    PADDING = 20  # 内边距
+    PADDING = 10  # 内边距
     ARROW_HEIGHT = 15  # 箭头高度
     MIN_WIDTH = 100  # 最小宽度
     MAX_WIDTH = 300  # 最大宽度
