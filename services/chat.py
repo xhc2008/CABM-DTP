@@ -72,11 +72,14 @@ class ChatService:
                             successful_tools.append(tool_name)
                         else:
                             failed_tools.append(f"{tool_name}: 缺少tool_definition属性")
+                            print("取消加载，因为缺少tool_definition属性")
                     else:
                         failed_tools.append(f"{tool_name}: 模块中没有找到同名函数")
+                        print("取消加载，因为模块中没有找到同名函数")
                         
                 except Exception as e:
                     failed_tools.append(f"{tool_name}: 加载失败 - {str(e)}")
+                    print(f"取消加载，因为{str(e)}")
         
         # 记录工具注册结果到日志
         self._log_tool_registration_result(successful_tools, failed_tools)
@@ -317,7 +320,14 @@ class ChatService:
                             # 当工具名称首次出现时，显示工具调用信息
                             if tool_call['function'].get('name') and index not in displayed_tool_calls:
                                 function_name = tool_call['function']['name']
-                                yield f"\n工具调用：{function_name}\n"
+                                
+                                # 从配置中获取友好显示名称，如果没有则使用默认格式
+                                display_name = ChatConfig.TOOL_CALL_DISPLAY_NAMES.get(
+                                    function_name, 
+                                    f"工具调用：{function_name}"
+                                )
+                                
+                                yield f"\n> {display_name}\n"
                                 displayed_tool_calls.add(index)
                         else:
                             # 累加参数

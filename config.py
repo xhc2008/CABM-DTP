@@ -15,6 +15,14 @@ class ChatConfig:
     VISION_SYSTEM_PROMPT = """你需要为一个没有视觉的AI agent，客观、精炼地描述这张图片，不要使用markdown。
 注意，用户的输入是给AI agent的，不是给你的，所以**仅作为描述的导向**。记住，你只能描述这张图片，**不要回答用户的问题**，**不要解释**。"""
     
+    TOOL_CALL_DISPLAY_NAMES = {
+    "execute_command": "往终端敲指令...",
+    "execute_command_async": "启动异步任务...",
+    "read_file": "阅读文件...",
+    "run_python": "手搓Python...",
+    "read_notes": "正在翻小本本...",
+    "recollect": "努力回忆...",
+    }
     # 最大工具调用轮次，防止无限循环 (来自 chat.py line 144)
     MAX_TOOL_CALLS = 7
     

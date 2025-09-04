@@ -12,7 +12,7 @@ def signal_handler(signum, frame):
 def initialize_rag_system():
     """初始化RAG系统"""
     try:
-        print("正在初始化RAG系统：这会有点慢，不要着急...")
+        print("正在初始化RAG系统：我知道你很急，但你先别急...")
         from services.context_builder import get_context_builder
         context_builder = get_context_builder()
         print("RAG系统初始化完成")
