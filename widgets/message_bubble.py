@@ -18,6 +18,52 @@ class MessageBubble(QWidget):
         self.setAttribute(Qt.WA_TranslucentBackground)
         self._calculate_size()
         
+    def _wrap_text(self, text, max_width):
+        """智能文本换行，支持强制换行长单词"""
+        font_metrics = QFontMetrics(self.font)
+        words = text.split()
+        lines = []
+        current_line = ""
+        
+        for word in words:
+            # 检查单个单词是否过长
+            word_width = font_metrics.horizontalAdvance(word)
+            if word_width > max_width:
+                # 如果当前行不为空，先添加到结果中
+                if current_line:
+                    lines.append(current_line.strip())
+                    current_line = ""
+                
+                # 强制拆分长单词
+                char_index = 0
+                while char_index < len(word):
+                    temp_word = ""
+                    while char_index < len(word):
+                        next_char = word[char_index]
+                        test_word = temp_word + next_char
+                        if font_metrics.horizontalAdvance(test_word) > max_width and temp_word:
+                            break
+                        temp_word = test_word
+                        char_index += 1
+                    
+                    if temp_word:
+                        lines.append(temp_word)
+                continue
+            
+            # 检查添加这个单词后是否会超出宽度
+            test_line = current_line + (" " if current_line else "") + word
+            if font_metrics.horizontalAdvance(test_line) > max_width and current_line:
+                lines.append(current_line.strip())
+                current_line = word
+            else:
+                current_line = test_line
+        
+        # 添加最后一行
+        if current_line:
+            lines.append(current_line.strip())
+        
+        return lines
+    
     def _calculate_size(self):
         """根据文本内容计算窗口大小"""
         if not self.text:
@@ -32,13 +78,11 @@ class MessageBubble(QWidget):
         
         # 如果文本宽度超过最大宽度，需要换行
         if text_width > self.max_width - self.padding * 2:
-            # 计算换行后的文本高度
-            text_rect = font_metrics.boundingRect(
-                0, 0, self.max_width - self.padding * 2, 1000,
-                Qt.AlignLeft | Qt.TextWordWrap, self.text
-            )
+            # 使用智能换行计算高度
+            max_text_width = self.max_width - self.padding * 2
+            wrapped_lines = self._wrap_text(self.text, max_text_width)
+            text_height = len(wrapped_lines) * font_metrics.height()
             bubble_width = self.max_width
-            text_height = text_rect.height()
         else:
             # 单行文本
             text_height = font_metrics.height()
@@ -87,12 +131,21 @@ class MessageBubble(QWidget):
         # 绘制文字
         painter.setPen(QColor(*BubbleConfig.TEXT_COLOR))
         painter.setFont(self.font)
-        text_rect = painter.boundingRect(
-            self.padding // 2, self.padding // 2,
-            width - self.padding, bubble_height - self.padding,
-            Qt.AlignLeft | Qt.TextWordWrap, self.text
-        )
-        painter.drawText(text_rect, Qt.AlignLeft | Qt.TextWordWrap, self.text)
+        
+        # 使用智能换行绘制文本
+        max_text_width = width - self.padding
+        wrapped_lines = self._wrap_text(self.text, max_text_width)
+        
+        font_metrics = QFontMetrics(self.font)
+        line_height = font_metrics.height()
+        y_offset = self.padding // 2
+        
+        for line in wrapped_lines:
+            painter.drawText(
+                self.padding // 2, y_offset + line_height,
+                line
+            )
+            y_offset += line_height
         
     def update_position(self):
         """更新位置（跟随宠物）"""
