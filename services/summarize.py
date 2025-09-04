@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 from config import SummaryConfig
 from .memory import ChatHistoryVectorDB
 from config import RAG_CONFIG
+from .context_builder import get_current_relevant_notes
 
 
 class ConversationSummarizer:
@@ -114,12 +115,21 @@ class ConversationSummarizer:
             "Content-Type": "application/json"
         }
         
+        # 构建增强的系统提示词，包含相关笔记
+        system_prompt = SummaryConfig.summary_prompt
+        relevant_notes = get_current_relevant_notes()
+        
+        if relevant_notes:
+            system_prompt += f"\n\n这是已经记录的笔记：```\n"
+            system_prompt += "\n".join(relevant_notes)
+            system_prompt += "\n```"
+        
         payload = {
             "model": self.model,
             "messages": [
                 {
                     "role": "system",
-                    "content": SummaryConfig.summary_prompt
+                    "content": system_prompt
                 },
                 {
                     "role": "user", 

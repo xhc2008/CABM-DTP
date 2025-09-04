@@ -89,6 +89,9 @@ class ContextBuilder:
         # 搜索相关笔记
         relevant_notes = self._search_notes(user_message)
         
+        # 保存相关笔记供总结时使用
+        set_current_relevant_notes(relevant_notes)
+        
         # 添加相关记忆
         if relevant_memories:
             enhanced_prompt += "\n\n以下是相关的记忆（如有）：\n```\n"
@@ -107,12 +110,25 @@ class ContextBuilder:
 # 全局上下文构建器实例
 _context_builder = None
 
+# 全局变量，保存当前对话的相关笔记，供总结时使用
+_current_relevant_notes = []
+
 def get_context_builder() -> ContextBuilder:
     """获取全局上下文构建器实例"""
     global _context_builder
     if _context_builder is None:
         _context_builder = ContextBuilder()
     return _context_builder
+
+def get_current_relevant_notes() -> list:
+    """获取当前对话的相关笔记"""
+    global _current_relevant_notes
+    return _current_relevant_notes
+
+def set_current_relevant_notes(notes: list):
+    """设置当前对话的相关笔记"""
+    global _current_relevant_notes
+    _current_relevant_notes = notes
 
 
 # 使用示例
