@@ -45,21 +45,13 @@ class ConversationSummarizer:
         # 清理不必要的目录结构
         self._cleanup_unnecessary_dirs()
     
+   # 在 summarize.py 和 context_builder.py 中修改
     def _create_custom_db(self, db_name: str) -> ChatHistoryVectorDB:
-        """创建自定义的向量数据库实例，避免创建不必要的子目录"""
-        # 创建数据库实例
+        """创建自定义的向量数据库实例"""
         db = ChatHistoryVectorDB(
             RAG_config=RAG_CONFIG,
-            character_name=db_name,
-            is_story=False
+            db_name=db_name  # 修改参数名
         )
-        
-        # 覆盖数据目录路径，直接使用data目录
-        db.data_memory = 'data'
-        
-        # 确保character_name正确设置（在加载前设置）
-        db.character_name = db_name
-        
         return db
     
     def _cleanup_unnecessary_dirs(self):

@@ -29,7 +29,7 @@ class AIResponseThread(QThread):
             self.finished.emit()
         except Exception as e:
             import random
-            self.response_chunk.emit(random.choice('\n'+SystemConfig.BACKUP_RESPONSES))
+            self.response_chunk.emit('\n' + random.choice(SystemConfig.BACKUP_RESPONSES))
             print(f"AI回复处理错误: {e}")
 
 # 创建一个工作线程类来处理VLM图片描述
@@ -431,7 +431,8 @@ class DesktopPet(QWidget):
         """追加AI回复文本块"""
         if self.message_bubble:
             current_text = self.message_bubble.get_current_text()
-            if current_text == "思考中...":
+            # 如果当前文本是"思考中..."或者只包含工具调用信息（以">"开头），则清空
+            if current_text == "思考中..." or (current_text.strip().startswith(">") and not any(c.isalnum() and not c.isascii() for c in current_text.replace(">", "").replace("工具调用", "").replace("：", ""))):
                 current_text = ""
             new_text = current_text + text_chunk
             print(text_chunk,end="")

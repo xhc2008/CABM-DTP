@@ -6,6 +6,7 @@ from datetime import datetime
 import traceback
 from dotenv import load_dotenv
 from .RAG import RAG
+
 class TimeoutError(Exception):
     """超时异常"""
     pass
@@ -15,23 +16,21 @@ def timeout_handler(signum, frame):
     raise TimeoutError("操作超时")
 
 class ChatHistoryVectorDB:
-    def __init__(self, RAG_config: dict, model: str = None, character_name: str = "default", is_story: bool = False):
+    def __init__(self, RAG_config: dict, model: str = None, db_name: str = "default"):
         """
         初始化向量数据库
         
         参数:
             RAG_config: RAG配置字典
             model: 使用的嵌入模型，如果为None则从环境变量读取
-            character_name: 角色名称或故事ID，用于确定数据库文件名
-            is_story: 是否为故事模式
+            db_name: 数据库名称，用于确定数据库文件名
         """
         self.config = RAG_config
-        self.character_name = character_name
+        self.db_name = db_name
         self.model = model
-        self.is_story = is_story
         
         # 设置日志
-        self.logger = logging.getLogger(f"MemoryDB_{character_name}")
+        self.logger = logging.getLogger(f"MemoryDB_{db_name}")
         if not self.logger.handlers:
             handler = logging.StreamHandler()
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -39,15 +38,9 @@ class ChatHistoryVectorDB:
             self.logger.addHandler(handler)
             self.logger.setLevel(logging.INFO)
         
-        # 根据模式设置数据目录
-        if is_story:
-            # 故事模式：保存到 data/saves/{story_id}/
-            self.data_memory = os.path.join('data', 'saves', character_name)
-        else:
-            # 角色模式：保存到 data/memory/{character_name}/
-            self.data_memory = os.path.join('data', 'memory', character_name)
-        
-        os.makedirs(self.data_memory, exist_ok=True)    
+        # 数据目录：保存到 data/
+        self.data_dir = 'data'
+        os.makedirs(self.data_dir, exist_ok=True)    
         
         # 从环境变量读取API配置
         load_dotenv()
@@ -68,13 +61,16 @@ class ChatHistoryVectorDB:
         
         self.rag = RAG(updated_config)
         
+    def get_db_file_path(self):
+        """获取数据库文件路径"""
+        return os.path.join(self.data_dir, f"{self.db_name}.json")
+    
     def add_text(self, text: str):
         """
         添加单个文本到向量数据库
         
         参数:
             text: 要添加的文本
-            metadata: 可选的元数据字典
         """
         self.rag.add(text)
     
@@ -105,7 +101,7 @@ class ChatHistoryVectorDB:
             
             results = []
             for text in top_indices:
-                result = {  #TODO 去除了<相似度>键, 多路召回后不是都有相似度
+                result = {
                     'text': text
                 }
                 results.append(result)
@@ -137,31 +133,24 @@ class ChatHistoryVectorDB:
             file_path: 保存路径，如果为None则使用默认路径
         """
         if file_path is None:
-            file_path = self.data_memory
+            file_path = self.get_db_file_path()
+        else:
+            # 如果提供了文件路径，确保目录存在
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
         
-        # 确保目录存在
-        os.makedirs(file_path, exist_ok=True)
+        rag_save = self.rag.save_to_file(os.path.dirname(file_path))
         
-        rag_save = self.rag.save_to_file(file_path)
         data = {
-            'character_name': self.character_name,
+            'db_name': self.db_name,
             'model': self.model,
             'rag': rag_save,
             'last_updated': datetime.now().isoformat()
         }
         
-        # 根据character_name决定文件名
-        if self.character_name in ['memory', 'notes']:
-            # 对于summarize.py使用的特殊数据库，直接使用character_name.json
-            filename = f"{self.character_name}.json"
-        else:
-            # 对于其他数据库，使用原来的命名方式
-            filename = f"{self.character_name}_memory.json"
-        
-        with open(os.path.join(file_path, filename), 'w', encoding='utf-8') as f:
+        with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
             
-        self.logger.info(f"向量数据库已保存到 {os.path.join(file_path, filename)}")
+        self.logger.info(f"向量数据库已保存到 {file_path}")
 
     def load_from_file(self, file_path: str = None):
         """
@@ -173,13 +162,7 @@ class ChatHistoryVectorDB:
         self.logger.info("加载向量数据库...")
         
         if file_path is None:
-            # 根据character_name决定文件路径
-            if self.character_name in ['memory', 'notes']:
-                # 对于summarize.py使用的特殊数据库，直接使用character_name.json
-                file_path = os.path.join(self.data_memory, f"{self.character_name}.json")
-            else:
-                # 对于其他数据库，使用原来的命名方式
-                file_path = os.path.join(self.data_memory, f"{self.character_name}_memory.json")
+            file_path = self.get_db_file_path()
         
         if not os.path.exists(file_path):
             self.logger.info(f"数据库文件不存在，将创建新的数据库: {file_path}")
@@ -189,11 +172,11 @@ class ChatHistoryVectorDB:
             with open(file_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 
-            self.character_name = data.get('character_name', self.character_name)
+            self.db_name = data.get('db_name', self.db_name)
             self.model = data.get('model', self.model)
             self.logger.info(f"加载RAG缓存")
             self.rag.load_from_file(data.get('rag', None))
-            self.logger.info(f"向量数据库加载完成，角色: {self.character_name}")
+            self.logger.info(f"向量数据库加载完成，数据库: {self.db_name}")
         except Exception as e:
             self.logger.error(f"加载数据库失败: {e}")
 
@@ -210,7 +193,7 @@ class ChatHistoryVectorDB:
             timestamp = datetime.now().isoformat()
         
         # 将用户消息和助手回复组合成一个对话单元（用于向量化）
-        conversation_text = f"用户: {user_message}\\{self.character_name}: {assistant_message}"
+        conversation_text = f"用户: {user_message}\\助手: {assistant_message}"
     
         self.add_text(conversation_text)
         self.logger.info(f"添加对话记录到向量数据库: {user_message[:50]}...")
@@ -220,7 +203,7 @@ class ChatHistoryVectorDB:
         初始化数据库（加载现有数据）
         """
         self.load_from_file()
-        self.logger.info(f"记忆数据库初始化完成，角色: {self.character_name}")
+        self.logger.info(f"记忆数据库初始化完成，数据库: {self.db_name}")
     
     def get_relevant_memory(self, query: str, top_k: int = 5, timeout: int = 10, min_similarity: float = 0.3) -> str:
         """
@@ -256,7 +239,6 @@ class ChatHistoryVectorDB:
             traceback.print_exc()
             return ""
 
-
     def build_from_file(self, file_path: str):
         """
         从文件构建向量数据库
@@ -272,7 +254,6 @@ class ChatHistoryVectorDB:
                 content = f.read()
             
             # 简单的文本分段处理
-            # 可以根据需要调整分段策略
             paragraphs = [p.strip() for p in content.split('\n\n') if p.strip()]
             
             for paragraph in paragraphs:
@@ -290,7 +271,7 @@ class ChatHistoryVectorDB:
 if __name__ == "__main__":
     # 初始化向量数据库（从环境变量自动读取配置）
     from config import RAG_CONFIG
-    vector_db = ChatHistoryVectorDB(RAG_CONFIG)
+    vector_db = ChatHistoryVectorDB(RAG_CONFIG, db_name="test")
     
     print("初始化完成")
 
@@ -298,7 +279,7 @@ if __name__ == "__main__":
     print("加载完成")
     
     # 搜索相似文本
-    results = vector_db.search("静流的外号", top_k=5)  # 使用默认值
+    results = vector_db.search("测试", top_k=5)
     print("搜索结果:")
     for res in results:
         print(f"文本: {res['text']}")

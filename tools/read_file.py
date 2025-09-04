@@ -5,7 +5,7 @@ from typing import Dict, Any
 tool_definition = {
     "type": "function",
     "function": {
-        "name": "read_txt_file",
+        "name": "read_file",
         "description": "读取文本或代码文件的内容",
         "parameters": {
             "type": "object",

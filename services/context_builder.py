@@ -26,12 +26,8 @@ class ContextBuilder:
         """创建自定义的向量数据库实例"""
         db = ChatHistoryVectorDB(
             RAG_config=RAG_CONFIG,
-            character_name=db_name,
-            is_story=False
+            db_name=db_name  # 修改参数名
         )
-        # 直接使用data目录
-        db.data_memory = 'data'
-        db.character_name = db_name
         return db
     
     def _load_databases(self):

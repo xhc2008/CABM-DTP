@@ -326,8 +326,10 @@ class ChatService:
                                     function_name, 
                                     f"工具调用：{function_name}"
                                 )
-                                
-                                yield f"\n> {display_name}\n"
+                                if full_content:
+                                    yield f"\n> {display_name}\n"
+                                else:
+                                    yield f"> {display_name}\n"
                                 displayed_tool_calls.add(index)
                         else:
                             # 累加参数
