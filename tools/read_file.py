@@ -12,7 +12,7 @@ tool_definition = {
             "properties": {
                 "file_path": {
                     "type": "string",
-                    "description": "要读取的文件的路径"
+                    "description": "要读取的文件的路径（相对或绝对）"
                 },
                 "start_line": {
                     "type": "integer",

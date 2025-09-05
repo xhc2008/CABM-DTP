@@ -18,16 +18,17 @@ class ChatConfig:
     TOOL_CALL_DISPLAY_NAMES = {
     "execute_command": "往终端敲指令...",
     "execute_command_async": "启动异步任务...",
-    "read_file": "阅读文件...",
-    "run_python": "手搓Python...",
+    "read_file": "让我看看你的文件...",
+    "run_python": "Python之力，解放！",
     "read_notes": "正在翻小本本...",
-    "recollect": "努力回忆中...",
+    "recollect": "别吵，我在思考...",
+    "modify_file": "正在修改文件，别乱动...",
     }
     # 最大工具调用轮次，防止无限循环 (来自 chat.py line 144)
     MAX_TOOL_CALLS = 8
     
     # 对话历史记录最大长度
-    MAX_CONVERSATION_HISTORY = 20
+    MAX_CONVERSATION_HISTORY = 10
     
     # API调用超时时间（秒）
     API_TIMEOUT = 40
@@ -42,7 +43,7 @@ class SummaryConfig:
     summary_prompt="""你是一个总结专家。用户输入的是用户和助手的一次对话，你需要帮助**助手**从中提取信息。
 你的输出是一个json，包含以下字段：
 "summary" <string> 总结本次对话，不超过50字。
-"add" <string array> 仅精炼列举本次对话中助手需**长期记忆**的新增重要信息，每条必须独立、简洁、完整。如果没有就保留空数组。
+"add" <string array> 仅精炼列举本次对话中助手需**长期记忆**的新增重要信息，每条必须独立、简洁、完整、保证长期有效。如果没有就保留空数组。
 "remove" <string array> 列出在本次对话中助手需要遗忘的错误或过时的记忆，只能是**已经记录的笔记**中的，可以为空。"""
 # 桌面宠物界面配置
 class PetConfig:
@@ -196,7 +197,7 @@ RAG_CONFIG = {
     "Remove": RAGConfig.REMOVE_CONFIG
 }
 
-# 导出所有配置类，方便导入使用
+# 导出所有配置类，方便导入食用
 __all__ = [
     'ChatConfig',
     'PetConfig', 
