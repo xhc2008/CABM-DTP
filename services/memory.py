@@ -124,6 +124,36 @@ class ChatHistoryVectorDB:
             # 取消超时设置（仅在非Windows系统上）
             if os.name != 'nt':
                 signal.alarm(0)
+
+    def remove_by_query(self, query: str, threshold: float = None, max_remove_count: int = None) -> int:
+        """
+        根据查询删除高于阈值的记录
+        
+        参数:
+            query: 查询文本
+            threshold: 相似度阈值，如果为None则使用配置中的值
+            max_remove_count: 最大删除数量，如果为None则使用配置中的值
+            
+        返回:
+            被删除的记录数量
+        """
+        try:
+            removed_ids = self.rag.remove(query, threshold, max_remove_count)
+            removed_count = len(removed_ids)
+            
+            if removed_count > 0:
+                self.logger.info(f"根据查询 '{query}' 删除了 {removed_count} 条记录")
+                # 保存更新后的数据库
+                self.save_to_file()
+            else:
+                self.logger.info(f"根据查询 '{query}' 未找到需要删除的记录")
+                
+            return removed_count
+            
+        except Exception as e:
+            self.logger.error(f"删除记录时出错: {e}")
+            traceback.print_exc()
+            return 0
     
     def save_to_file(self, file_path: str = None):
         """

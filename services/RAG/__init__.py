@@ -35,6 +35,20 @@ class RAG:
         rerank_res = self.reranker.rerank(retrieval_res, query, k=top_k)  # 后处理, 精排
         return rerank_res
 
+    def remove(self, query: str, threshold: float = None, max_remove_count: int = None) -> List[int]:
+        """
+        根据查询删除高于阈值的记录
+        
+        参数:
+            query: 查询文本
+            threshold: 相似度阈值，如果为None则使用配置中的值
+            max_remove_count: 最大删除数量，如果为None则使用配置中的值
+            
+        返回:
+            被删除的文档ID列表
+        """
+        return self.retriever.remove_by_query(query, threshold, methods=None, max_remove_count=max_remove_count)
+
 if __name__ == '__main__':
     # 创建一个知识库对象
     from config import RAG_CONFIG

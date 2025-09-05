@@ -192,6 +192,56 @@ class Cosine_Similarity(Retriever):
             res.append(id_to_doc[min(len(id_to_doc)-1, idx+1)])
         res = list(set(res))
         return res
+
+    def remove_by_query(self, 
+                       query: str, 
+                       id_to_doc: Dict[int, str], 
+                       threshold: float = None
+                       ) -> List[int]:
+        """
+        根据查询删除高于阈值的记录
+        
+        参数:
+            query: 查询文本
+            id_to_doc: 文档id到文档内容的映射
+            threshold: 相似度阈值，如果为None则使用默认阈值
+            
+        返回:
+            被删除的文档ID列表
+        """
+        if threshold is None:
+            threshold = self.threshold
+            
+        # 1. 计算query向量，归一化
+        query_embed = self.embed(query)[0]
+        query_embed = np.array(query_embed)
+        query_embed = query_embed / np.linalg.norm(query_embed)
+
+        # 2. 计算所有向量与query的相似度
+        sims = []
+        for vec in self.vectors:
+            sims.append(np.dot(query_embed, vec))
+
+        sims = np.array(sims)
+        
+        # 3. 找到所有高于阈值的索引
+        high_sim_indices = np.where(sims >= threshold)[0]
+        
+        # 4. 按相似度从高到低排序
+        sorted_indices = high_sim_indices[sims[high_sim_indices].argsort()[::-1]]
+        
+        removed_ids = []
+        
+        # 5. 从后往前删除（避免索引变化问题）
+        for idx in sorted(sorted_indices, reverse=True):
+            idx = int(idx)
+            if idx < len(self.vectors):
+                # 删除向量
+                del self.vectors[idx]
+                removed_ids.append(idx)
+                logger.info(f"删除向量索引 {idx}, 相似度: {sims[idx]:.4f}")
+        
+        return sorted(removed_ids)
     
 
 if __name__ == "__main__":

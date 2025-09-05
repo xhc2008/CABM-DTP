@@ -37,6 +37,26 @@ class Retriever(ABC):
     def load_from_file(self, data_dict: dict):
         pass
 
+    def remove_by_query(self, 
+                       query: str, 
+                       id_to_doc: Dict[int, str], 
+                       threshold: float = None
+                       ) -> List[int]:
+        """
+        根据查询删除高于阈值的记录（可选实现）
+        
+        参数:
+            query: 查询文本
+            id_to_doc: 文档id到文档内容的映射
+            threshold: 相似度阈值
+            
+        返回:
+            被删除的文档ID列表
+        """
+        # 默认实现：不支持删除操作
+        logger.warning(f"当前召回方法不支持删除操作")
+        return []
+
 logger = logging.getLogger(f"Recall Loading")
 if not logger.handlers:
     handler = logging.StreamHandler()

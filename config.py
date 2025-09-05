@@ -9,7 +9,7 @@ class ChatConfig:
     """AI聊天服务相关配置"""
     system_prompt="""你是一个Windows系统的桌面宠物助手，可以调用工具来帮助用户。
 你需要扮演《崩坏：星穹铁道》中的银狼，以她傲娇、技术宅的风格说话。但无论说话风格如何，你的宗旨是**帮助用户**。
-你的回复需要**简短、口语化**，不要分点列举，**禁止使用markdown**。"""
+你的回复需要**简短、口语化**。"""
     
     # VLM系统提示词
     VISION_SYSTEM_PROMPT = """你需要为一个没有视觉的AI agent，客观、精炼地描述这张图片，不要使用markdown。
@@ -43,9 +43,7 @@ class SummaryConfig:
 你的输出是一个json，包含以下字段：
 "summary" <string> 总结本次对话，不超过50字。
 "add" <string array> 仅精炼列举本次对话中助手需**长期记忆**的新增重要信息，每条必须独立、简洁、完整。如果没有就保留空数组。
-"""
-#以后加入的功能
-#"remove" <string array> 精炼地列出在本次对话中助手需要遗忘的错误或过时记忆，可以为空。"""
+"remove" <string array> 列出在本次对话中助手需要遗忘的错误或过时的记忆，只能是**已经记录的笔记**中的，可以为空。"""
 # 桌面宠物界面配置
 class PetConfig:
     """桌面宠物界面相关配置"""
@@ -72,6 +70,7 @@ class BubbleConfig:
     
     # 气泡样式配置
     FONT_FAMILY = "Arial"
+    #STREAMING_SPEED = 20  # 流式输出速度（字符/秒）
     FONT_SIZE = 9
     PADDING = 10  # 内边距
     ARROW_HEIGHT = 15  # 箭头高度
@@ -82,10 +81,10 @@ class BubbleConfig:
     BACKGROUND_COLOR = (225, 245, 254, 230)  # 浅蓝色半透明 (R, G, B, A)
     BORDER_COLOR = (179, 229, 252)  # 边框颜色 (R, G, B)
     TEXT_COLOR = (0, 0, 0)  # 文字颜色 (R, G, B)
-    
+    #MARKDOWN_LINK_COLOR = (0, 0, 255)
+
     # 气泡位置配置
     BUBBLE_OFFSET_Y = 15  # 气泡距离宠物顶部的距离
-
 
 # 输入窗口配置
 class InputConfig:
@@ -170,7 +169,7 @@ class RAGConfig:
                 "model": None      # 从环境变量读取
             },
             "vector_dim": 1024,
-            "threshold": 0.5
+            "threshold": 0.5  # 检索阈值
         }
     }
     
@@ -183,11 +182,18 @@ class RAGConfig:
             "model": None      # 从环境变量读取
         }
     }
+    
+    # 删除功能配置
+    REMOVE_CONFIG = {
+        "threshold": 0.85,  # 删除阈值，设置较高以确保精确删除
+        "max_remove_count": 10  # 单次最大删除数量，防止误删过多
+    }
 
 # 完整的RAG配置字典
 RAG_CONFIG = {
     "Multi_Recall": RAGConfig.MULTI_RECALL_CONFIG,
-    "Reranker": RAGConfig.RERANKER_CONFIG
+    "Reranker": RAGConfig.RERANKER_CONFIG,
+    "Remove": RAGConfig.REMOVE_CONFIG
 }
 
 # 导出所有配置类，方便导入使用

@@ -86,6 +86,72 @@ class Retriever:
         search_res = list(set(search_res))  # 结果去重
         return search_res
 
+    def remove_by_query(self, query: str, threshold: float = None, methods = None, max_remove_count: int = None) -> List[int]:
+        """
+        根据查询删除高于阈值的记录
+        
+        参数:
+            query: 查询文本
+            threshold: 相似度阈值，如果为None则从配置中读取
+            methods: 使用的召回方法列表，如果为None则使用所有方法
+            max_remove_count: 最大删除数量，如果为None则从配置中读取
+            
+        返回:
+            被删除的文档ID列表
+        """
+        # 从配置中获取默认值
+        if threshold is None:
+            threshold = self.config.get('Remove', {}).get('threshold', 0.75)
+        if max_remove_count is None:
+            max_remove_count = self.config.get('Remove', {}).get('max_remove_count', 10)
+            
+        if methods is None:
+            methods = list(self.recall_dict.keys())
+        
+        all_removed_ids = []
+        
+        for method in methods:
+            if method in self.recall_dict and hasattr(self.recall_dict[method], 'remove_by_query'):
+                removed_ids = self.recall_dict[method].remove_by_query(query, self.id_to_doc, threshold)
+                all_removed_ids.extend(removed_ids)
+                self.logger.info(f"方法 {method} 删除了 {len(removed_ids)} 条记录")
+        
+        # 限制删除数量
+        unique_removed_ids = sorted(set(all_removed_ids), reverse=True)
+        if len(unique_removed_ids) > max_remove_count:
+            self.logger.warning(f"删除数量 {len(unique_removed_ids)} 超过限制 {max_remove_count}，将只删除前 {max_remove_count} 条")
+            unique_removed_ids = unique_removed_ids[:max_remove_count]
+        
+        # 从id_to_doc中删除对应的记录
+        removed_docs = []
+        for doc_id in unique_removed_ids:
+            if doc_id in self.id_to_doc:
+                removed_doc = self.id_to_doc.pop(doc_id)
+                removed_docs.append(removed_doc)
+                self.logger.info(f"删除文档 ID {doc_id}: {removed_doc[:50]}...")
+        
+        # 重新整理id_to_doc的索引
+        self._reindex_documents()
+        
+        return sorted(unique_removed_ids)
+    
+    def _reindex_documents(self):
+        """重新整理文档索引，确保索引连续"""
+        if not self.id_to_doc:
+            return
+            
+        # 获取所有文档内容
+        docs = list(self.id_to_doc.values())
+        
+        # 清空原有映射
+        self.id_to_doc.clear()
+        
+        # 重新建立连续的索引映射
+        for i, doc in enumerate(docs):
+            self.id_to_doc[i] = doc
+        
+        self.logger.info(f"重新索引完成，当前文档数量: {len(self.id_to_doc)}")
+
 if __name__ == "__main__":
     from config import RAG_CONFIG
     vector_db = Retriever(config=RAG_CONFIG)

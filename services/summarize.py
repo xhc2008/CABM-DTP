@@ -178,6 +178,12 @@ class ConversationSummarizer:
             elif not isinstance(parsed['add'], list):
                 parsed['add'] = []
             
+            # 确保remove字段是列表
+            if 'remove' not in parsed:
+                parsed['remove'] = []
+            elif not isinstance(parsed['remove'], list):
+                parsed['remove'] = []
+            
             return parsed
             
         except json.JSONDecodeError as e:
@@ -228,6 +234,22 @@ class ConversationSummarizer:
             
         except Exception as e:
             print(f"保存到notes数据库失败: {e}")
+
+    def _remove_from_notes_db(self, remove_queries: List[str]):
+        """根据查询词从notes向量数据库中删除记录"""
+        try:
+            total_removed = 0
+            for query in remove_queries:
+                if query.strip():  # 跳过空查询
+                    removed_count = self.notes_db.remove_by_query(query.strip())
+                    total_removed += removed_count
+                    print(f"根据查询 '{query}' 删除了 {removed_count} 条笔记")
+            
+            if total_removed > 0:
+                print(f"总共删除了 {total_removed} 条笔记")
+            
+        except Exception as e:
+            print(f"从notes数据库删除记录失败: {e}")
     
     def summarize_conversation_async(self, user_message: str, assistant_message: str, tool_calls: List[Dict[str, Any]] = None):
         """异步总结对话（在单独线程中执行）"""
@@ -257,12 +279,19 @@ class ConversationSummarizer:
             # Step 3: 提取字段
             summary = summary_result.get('summary', '')
             add_notes = summary_result.get('add', [])
+            remove_queries = summary_result.get('remove', [])
             
             print(f"总结结果: {summary}")
             if add_notes:
                 print(f"新增笔记: {add_notes}")
+            if remove_queries:
+                print(f"需要删除的记忆关键词: {remove_queries}")
             
-            # Step 4: 保存到向量数据库
+            # Step 4: 处理删除操作（在添加新记录之前）
+            if remove_queries:
+                self._remove_from_notes_db(remove_queries)
+            
+            # Step 5: 保存到向量数据库
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             
             # 保存总结到memory数据库
