@@ -85,7 +85,7 @@ class BubbleConfig:
     #MARKDOWN_LINK_COLOR = (0, 0, 255)
 
     # 气泡位置配置
-    BUBBLE_OFFSET_Y = 15  # 气泡距离宠物顶部的距离
+    BUBBLE_OFFSET_Y = 16  # 气泡距离宠物顶部的距离
 
 # 输入窗口配置
 class InputConfig:
@@ -112,7 +112,7 @@ class OptionsConfig:
     """选项栏相关配置"""
     # 窗口大小
     PANEL_WIDTH = 70
-    PANEL_HEIGHT = 150
+    PANEL_HEIGHT = 130
     
     # 位置配置
     PANEL_OFFSET_X = 30  # 相对于宠物右侧的X偏移

@@ -131,11 +131,17 @@ class ChatService:
                 f.write(f"\n{'='*50}\n")
                 f.write(f"时间: {timestamp}\n")
                 
-                # 记录原始请求的message字段
+                # 记录原始请求的message字段，使用指定格式
                 if "messages" in request_data:
-                    f.write(f"请求消息:\n")
-                    for msg in request_data["messages"]:
-                        f.write(f"  {msg['role']}: {msg['content']}\n")
+                    f.write(f'"messages": [\n')
+                    for i, msg in enumerate(request_data["messages"]):
+                        # 转义内容中的双引号和换行符
+                        content = msg['content'].replace('"', '\\"').replace('\n', '\\n')
+                        if i < len(request_data["messages"]) - 1:
+                            f.write(f'  {{"role": "{msg["role"]}","content": "{content}"}},\n')
+                        else:
+                            f.write(f'  {{"role": "{msg["role"]}","content": "{content}"}}\n')
+                    f.write(f']\n')
                 
                 # 记录合并后的原始响应message
                 if parsed_response:
@@ -362,17 +368,31 @@ class ChatService:
                     
                     # 执行工具
                     tool_result = self.execute_tool(function_name, function_args)
-                    
-                    # 添加工具响应
+
+                    # 确保工具返回的是字典，然后正确编码
+                    if isinstance(tool_result, dict):
+                        content = json.dumps(tool_result, ensure_ascii=False)
+                    else:
+                        # 如果工具返回的不是字典，转换为字符串
+                        content = str(tool_result)
+                        
                     tool_responses.append({
-                        "tool_call_id": tool_call['id'],
                         "role": "tool",
-                        "name": function_name,
-                        "content": json.dumps(tool_result, ensure_ascii=False)
+                        "tool_call_id": tool_call['id'],
+                        "content": content
                     })
+                    
+                    # 如果工具执行失败，添加状态信息
+                    # if tool_result.get("status") == "error":
+                    #     tool_response["status"] = "error"
+                    
+                    # tool_responses.append(tool_response)
                 
                 # 添加工具响应到消息列表
                 messages.extend(tool_responses)
+                
+                # 记录工具调用和响应的详细日志
+                self._log_tool_execution(tool_calls_list, tool_responses)
                 
                 # 显示工具执行完成提示
                 #yield "正在处理工具结果...\n"
@@ -426,6 +446,59 @@ class ChatService:
                 tool_calls = message["tool_calls"] + tool_calls
         return tool_calls
     
+    def _log_tool_execution(self, tool_calls: List[Dict[str, Any]], tool_responses: List[Dict[str, Any]]):
+        """记录工具执行的详细日志"""
+        try:
+            with open("log.txt", "a", encoding="utf-8") as f:
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                f.write(f"\n--- 工具执行日志 [{timestamp}] ---\n")
+                
+                # 构建完整的messages格式，包含assistant的工具调用和tool的响应
+                messages_log = []
+                
+                # 添加assistant的工具调用
+                if tool_calls:
+                    assistant_msg = {
+                        "role": "assistant",
+                        "content": "",
+                        "tool_calls": tool_calls
+                    }
+                    messages_log.append(assistant_msg)
+                
+                # 添加tool的响应
+                for i in tool_responses:
+                    messages_log.append(i)
+                
+                # 按照指定格式输出
+                f.write('"messages": [\n')
+                for i, msg in enumerate(messages_log):
+                    if msg["role"] == "assistant":
+                        # 转义内容
+                        content = msg.get("content", "").replace('"', '\\"').replace('\n', '\\n')
+                        f.write(f'  {{"role": "assistant","content": "{content}"}},\n')
+                        
+                        # 如果有工具调用，也记录工具调用信息
+                        if "tool_calls" in msg and msg["tool_calls"]:
+                            for tool_call in msg["tool_calls"]:
+                                function_name = tool_call["function"]["name"]
+                                f.write(f'  # 工具调用: {function_name}\n')
+                    
+                    elif msg["role"] == "tool":
+                        # 转义内容
+                        content = msg.get("content", "").replace('"', '\\"').replace('\n', '\\n')
+                        status = msg.get("status", "success")
+                        tool_call_id = msg.get("tool_call_id", "")
+                        
+                        if i < len(messages_log) - 1:
+                            f.write(f'  {{"role": "tool","status": "{status}","content": "{content}","tool_call_id": "{tool_call_id}"}},\n')
+                        else:
+                            f.write(f'  {{"role": "tool","status": "{status}","content": "{content}","tool_call_id": "{tool_call_id}"}}\n')
+                
+                f.write(']\n')
+                f.write("--- 工具执行日志结束 ---\n\n")
+        except Exception as e:
+            print(f"工具执行日志记录失败: {e}")
+
     def _summarize_conversation_async(self, user_message: str, assistant_message: str, tool_calls: List[Dict[str, Any]] = None):
         """异步调用对话总结功能"""
         try:
