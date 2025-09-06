@@ -84,7 +84,7 @@ class InputWindow(QWidget):
             }
         """)
         self.input_edit.returnPressed.connect(self.send_message)
-        self.input_edit.setPlaceholderText("<")
+        self.input_edit.setPlaceholderText("")
         # 重写按键事件
         self.input_edit.keyPressEvent = self.handle_key_press
         
