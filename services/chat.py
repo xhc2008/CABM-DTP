@@ -371,22 +371,25 @@ class ChatService:
 
                     # 确保工具返回的是字典，然后正确编码
                     if isinstance(tool_result, dict):
-                        content = json.dumps(tool_result, ensure_ascii=False)
+                        # 如果工具执行失败，将错误信息放入content中
+                        if tool_result.get("status") == "error":
+                            # 创建包含错误信息的字典
+                            error_content = {
+                                "status": "error",
+                                "message": tool_result.get("message", "工具执行失败")
+                            }
+                            content = json.dumps(error_content, ensure_ascii=False)
+                        else:
+                            content = json.dumps(tool_result, ensure_ascii=False)
                     else:
                         # 如果工具返回的不是字典，转换为字符串
                         content = str(tool_result)
-                        
+                    
                     tool_responses.append({
                         "role": "tool",
                         "tool_call_id": tool_call['id'],
                         "content": content
                     })
-                    
-                    # 如果工具执行失败，添加状态信息
-                    # if tool_result.get("status") == "error":
-                    #     tool_response["status"] = "error"
-                    
-                    # tool_responses.append(tool_response)
                 
                 # 添加工具响应到消息列表
                 messages.extend(tool_responses)
