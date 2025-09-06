@@ -1,7 +1,7 @@
 import random
-from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout
+from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout, QSystemTrayIcon, QMenu, QAction
 from PyQt5.QtCore import Qt, QPoint, QTimer, pyqtSignal, QThread
-from PyQt5.QtGui import QPixmap, QMouseEvent, QFont
+from PyQt5.QtGui import QPixmap, QMouseEvent, QFont, QIcon
 from .input_window import InputWindow
 from .message_bubble import MessageBubble
 from .options_panel import OptionsPanel
@@ -116,6 +116,9 @@ class DesktopPet(QWidget):
         # 移除预设回复列表
         # self.responses = [...]
         
+        # 初始化系统托盘
+        self.init_system_tray()
+        
         self.init_ui()
         
         # 定时器用于检测位置变化
@@ -125,6 +128,61 @@ class DesktopPet(QWidget):
         
         self.last_position = self.pos()
         self.ai_response_ready.connect(self.append_ai_response)
+        
+    def init_system_tray(self):
+        """初始化系统托盘"""
+        # 检查系统是否支持托盘
+        if not QSystemTrayIcon.isSystemTrayAvailable():
+            print("系统不支持托盘功能")
+            return
+            
+        # 创建托盘图标
+        self.tray_icon = QSystemTrayIcon(self)
+        
+        # 设置托盘图标（使用宠物图片或默认图标）
+        try:
+            if os.path.exists(PetConfig.PET_IMAGE_PATH):
+                icon = QIcon(PetConfig.PET_IMAGE_PATH)
+            else:
+                # 如果宠物图片不存在，创建一个简单的默认图标
+                pixmap = QPixmap(32, 32)
+                pixmap.fill(Qt.blue)
+                icon = QIcon(pixmap)
+            self.tray_icon.setIcon(icon)
+        except Exception as e:
+            print(f"设置托盘图标失败: {e}")
+            # 使用系统默认图标
+            self.tray_icon.setIcon(self.style().standardIcon(self.style().SP_ComputerIcon))
+        
+        # 设置托盘提示
+        self.tray_icon.setToolTip("Silver Wolf")
+        
+        # 创建托盘菜单
+        tray_menu = QMenu()
+        
+        # 显示动作
+        show_action = QAction("显示", self)
+        show_action.triggered.connect(self.show_from_tray)
+        tray_menu.addAction(show_action)
+        
+        # 分隔符
+        tray_menu.addSeparator()
+        
+        # 退出动作
+        quit_action = QAction("退出", self)
+        quit_action.triggered.connect(self.close_application)
+        tray_menu.addAction(quit_action)
+        
+        # 设置托盘菜单
+        self.tray_icon.setContextMenu(tray_menu)
+        
+        # 双击托盘图标显示窗口
+        self.tray_icon.activated.connect(self.tray_icon_activated)
+        
+    def tray_icon_activated(self, reason):
+        """托盘图标激活事件"""
+        if reason == QSystemTrayIcon.DoubleClick:
+            self.show_from_tray()
         
     def init_ui(self):
         """初始化界面"""
@@ -289,7 +347,7 @@ class DesktopPet(QWidget):
         if not self.options_panel:
             self.options_panel = OptionsPanel(self)
             self.options_panel.exit_requested.connect(self.close_application)
-            self.options_panel.hide_requested.connect(self.hide_panels)
+            self.options_panel.hide_requested.connect(self.hide_to_tray)
             self.options_panel.screenshot_requested.connect(self.start_screenshot)
             
         # 更新并显示位置
@@ -480,7 +538,7 @@ class DesktopPet(QWidget):
         if not self.options_panel:
             self.options_panel = OptionsPanel(self)
             self.options_panel.exit_requested.connect(self.close_application)
-            self.options_panel.hide_requested.connect(self.hide_panels)
+            self.options_panel.hide_requested.connect(self.hide_to_tray)
             self.options_panel.screenshot_requested.connect(self.start_screenshot)
             
         # 更新并显示位置
@@ -565,34 +623,13 @@ class DesktopPet(QWidget):
         import os
         import sys
         
-        # 确保所有子窗口都关闭
-        if self.input_window:
-            self.input_window.close()
-        if self.options_panel:
-            self.options_panel.close()
-        if self.message_bubble:
-            self.message_bubble.close()
+        # 隐藏系统托盘图标
+        if hasattr(self, 'tray_icon'):
+            self.tray_icon.hide()
             
-        # 停止所有定时器和线程
-        if hasattr(self, 'move_timer') and self.move_timer:
-            self.move_timer.stop()
-        if hasattr(self, 'right_click_timer') and self.right_click_timer:
-            self.right_click_timer.stop()
-        if hasattr(self, 'ai_thread') and self.ai_thread and self.ai_thread.isRunning():
-            self.ai_thread.terminate()
-            self.ai_thread.wait()
-        if hasattr(self, 'vision_thread') and self.vision_thread and self.vision_thread.isRunning():
-            self.vision_thread.terminate()
-            self.vision_thread.wait()
-            
-        # 关闭主窗口
-        self.close()
+        # 执行真正的关闭流程
+        self._real_close()
         
-        # 退出整个应用程序
-        from PyQt5.QtWidgets import QApplication
-        app = QApplication.instance()
-        if app:
-            app.quit()
         # 强制退出Python进程（确保后台进程也关闭）
         try:
             os._exit(0)
@@ -605,9 +642,67 @@ class DesktopPet(QWidget):
             self.input_window.close()
         if self.options_panel:
             self.options_panel.close()
+            
+    def hide_to_tray(self):
+        """隐藏所有组件到系统托盘"""
+        try:
+            # 隐藏所有窗口组件
+            if self.input_window:
+                self.input_window.hide()
+            if self.options_panel:
+                self.options_panel.hide()
+            if self.message_bubble:
+                self.message_bubble.hide()
+            
+            # 隐藏主窗口（桌宠本体）
+            self.hide()
+            
+            # 显示系统托盘图标
+            if hasattr(self, 'tray_icon'):
+                self.tray_icon.show()
+                # 显示托盘消息提示
+                self.tray_icon.showMessage(
+                    "桌面宠物",
+                    "已隐藏到系统托盘，右键托盘图标可以重新显示",
+                    QSystemTrayIcon.Information,
+                    3000  # 3秒后自动消失
+                )
+            
+            print("已隐藏到系统托盘")
+            
+        except Exception as e:
+            print(f"隐藏到托盘失败: {e}")
+            
+    def show_from_tray(self):
+        """从系统托盘恢复显示"""
+        try:
+            # 显示主窗口（桌宠本体）
+            self.show()
+            self.raise_()
+            self.activateWindow()
+            
+            # 隐藏系统托盘图标
+            if hasattr(self, 'tray_icon'):
+                self.tray_icon.hide()
+            
+            print("已从系统托盘恢复显示")
+            
+        except Exception as e:
+            print(f"从托盘恢复显示失败: {e}")
 
     def closeEvent(self, event):
-        """关闭事件"""
+        """关闭事件 - 隐藏到托盘而不是退出"""
+        # 如果系统托盘可用，隐藏到托盘
+        if hasattr(self, 'tray_icon') and QSystemTrayIcon.isSystemTrayAvailable():
+            self.hide_to_tray()
+            event.ignore()  # 忽略关闭事件，不真正关闭
+        else:
+            # 如果系统托盘不可用，执行正常关闭流程
+            self._real_close()
+            event.accept()
+            
+    def _real_close(self):
+        """真正的关闭流程"""
         # 停止定时器
         if hasattr(self, 'move_timer') and self.move_timer:
             self.move_timer.stop()
@@ -635,5 +730,3 @@ class DesktopPet(QWidget):
         # 确保应用程序完全退出
         from PyQt5.QtWidgets import QApplication
         QApplication.instance().quit()
-        
-        event.accept()

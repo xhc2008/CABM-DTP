@@ -37,6 +37,9 @@ def main():
         app.setApplicationName("桌面宠物")
         app.setApplicationVersion("0.1")
         
+        # 设置应用程序在最后一个窗口关闭时不退出（支持系统托盘）
+        app.setQuitOnLastWindowClosed(False)
+        
         # 设置信号处理器（仅在非Windows系统上）
         import os
         if os.name != 'nt':  # 非Windows系统
