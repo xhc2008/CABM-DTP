@@ -78,6 +78,12 @@ class DesktopPet(QWidget):
         self.is_dragging = False
         self.ai_thread = None
         self.vision_thread = None
+        
+        # 防抖机制
+        self.right_click_timer = QTimer()
+        self.right_click_timer.setSingleShot(True)
+        self.right_click_timer.timeout.connect(self.handle_right_click_action)
+        self.debounce_delay = 200  # 200ms防抖延迟
         current_script_dir = os.path.dirname(os.path.abspath(__file__))
 
         # 向上回退一级，找到项目根目录（即 .env 所在的目录）
@@ -183,7 +189,8 @@ class DesktopPet(QWidget):
             self.is_dragging = True
             event.accept()
         elif event.button() == Qt.RightButton:
-            self.show_input_window()
+            # 使用防抖机制处理右键点击
+            self.right_click_timer.start(self.debounce_delay)
             event.accept()
             
     def mouseMoveEvent(self, event: QMouseEvent):
@@ -218,10 +225,53 @@ class DesktopPet(QWidget):
         if self.message_bubble and self.message_bubble.isVisible():
             self.message_bubble.update_position()
             
-    def show_input_window(self):
-        """显示输入窗口和选项栏"""
-        # 隐藏之前的消息气泡
+    def handle_right_click_action(self):
+        """处理右键点击的实际逻辑（防抖后执行）"""
+        # 检查当前状态并决定相应的行为
+        input_visible = self.input_window and self.input_window.isVisible()
+        options_visible = self.options_panel and self.options_panel.isVisible()
+        bubble_visible = self.message_bubble and self.message_bubble.isVisible()
+        
+        if bubble_visible:
+            # 情况1: 消息气泡显示时
+            if options_visible:
+                # 如果选项栏也显示，只隐藏选项栏
+                self.hide_options_panel()
+            else:
+                # 打断消息气泡，显示输入框和选项栏
+                self.interrupt_message_and_show_input()
+        elif input_visible and options_visible:
+            # 情况2: 输入框和选项栏都显示时，隐藏它们
+            self.hide_panels()
+        else:
+            # 情况3: 默认情况，显示输入框和选项栏
+            self.show_input_window()
+            
+    def interrupt_message_and_show_input(self):
+        """打断消息气泡并显示输入框和选项栏"""
+        # 停止AI线程
+        if self.ai_thread and self.ai_thread.isRunning():
+            self.ai_thread.terminate()
+            self.ai_thread.wait()
+            self.ai_thread = None
+            
+        # 隐藏消息气泡
         if self.message_bubble:
+            self.message_bubble.close()
+            self.message_bubble = None
+            
+        # 显示输入框和选项栏（不隐藏气泡，因为已经手动隐藏了）
+        self.show_input_window(hide_bubble=False)
+        
+    def hide_options_panel(self):
+        """只隐藏选项栏"""
+        if self.options_panel:
+            self.options_panel.close()
+            
+    def show_input_window(self, hide_bubble=True):
+        """显示输入窗口和选项栏"""
+        # 根据参数决定是否隐藏消息气泡
+        if hide_bubble and self.message_bubble:
             self.message_bubble.close()
             self.message_bubble = None
             
@@ -422,10 +472,26 @@ class DesktopPet(QWidget):
         self.message_bubble = MessageBubble(self)
         self.message_bubble.set_text("思考中...")
         
+        # 隐藏输入框，但保持选项栏显示
+        if self.input_window:
+            self.input_window.close()
+            
+        # 确保选项栏显示
+        if not self.options_panel:
+            self.options_panel = OptionsPanel(self)
+            self.options_panel.exit_requested.connect(self.close_application)
+            self.options_panel.hide_requested.connect(self.hide_panels)
+            self.options_panel.screenshot_requested.connect(self.start_screenshot)
+            
         # 更新并显示位置
         self.message_bubble.update_position()
+        self.options_panel.update_position()
+        
         self.message_bubble.show()
+        self.options_panel.show()
+        
         self.message_bubble.raise_()
+        self.options_panel.raise_()
 
     def append_ai_response(self, text_chunk):
         """追加AI回复文本块"""
@@ -510,6 +576,8 @@ class DesktopPet(QWidget):
         # 停止所有定时器和线程
         if hasattr(self, 'move_timer') and self.move_timer:
             self.move_timer.stop()
+        if hasattr(self, 'right_click_timer') and self.right_click_timer:
+            self.right_click_timer.stop()
         if hasattr(self, 'ai_thread') and self.ai_thread and self.ai_thread.isRunning():
             self.ai_thread.terminate()
             self.ai_thread.wait()
@@ -543,6 +611,8 @@ class DesktopPet(QWidget):
         # 停止定时器
         if hasattr(self, 'move_timer') and self.move_timer:
             self.move_timer.stop()
+        if hasattr(self, 'right_click_timer') and self.right_click_timer:
+            self.right_click_timer.stop()
         if hasattr(self, 'timer') and hasattr(self, 'timer') and self.timer:
             self.timer.stop()
         

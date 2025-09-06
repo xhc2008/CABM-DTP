@@ -206,11 +206,25 @@ class InputWindow(QWidget):
                     if options_panel and options_panel.isVisible():
                         options_rect = options_panel.geometry()
                         if not options_rect.contains(click_pos):
-                            self.close()
-                            if options_panel:
-                                options_panel.close()
+                            # 检查是否点击在桌宠本体上（如果是右键，让桌宠处理）
+                            pet_rect = self.parent_pet.geometry()
+                            if pet_rect.contains(click_pos) and event.button() == Qt.RightButton:
+                                # 让桌宠的右键逻辑处理，不在这里关闭
+                                pass
+                            else:
+                                # 点击在其他地方，关闭窗口
+                                self.close()
+                                if options_panel:
+                                    options_panel.close()
                     else:
-                        self.close()
+                        # 检查是否点击在桌宠本体上（如果是右键，让桌宠处理）
+                        pet_rect = self.parent_pet.geometry()
+                        if pet_rect.contains(click_pos) and event.button() == Qt.RightButton:
+                            # 让桌宠的右键逻辑处理，不在这里关闭
+                            pass
+                        else:
+                            # 点击在其他地方，关闭窗口
+                            self.close()
         
         return super().eventFilter(obj, event)
         

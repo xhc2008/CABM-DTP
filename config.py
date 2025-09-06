@@ -67,7 +67,7 @@ class PetConfig:
 class BubbleConfig:
     """消息气泡相关配置"""
     # 气泡自动隐藏时间（毫秒）- 来自 desktop_pet.py 中的 QTimer.singleShot(3000, ...)
-    AUTO_HIDE_DELAY = 100000
+    AUTO_HIDE_DELAY = 200000
     
     # 气泡样式配置
     FONT_FAMILY = "Arial"

@@ -79,10 +79,21 @@ class OptionsPanel(QWidget):
         self.screenshot_button.clicked.connect(self.screenshot_requested.emit)
         outer_layout.addWidget(self.screenshot_button)
         
-        # 隐藏按钮
+        # 隐藏按钮（已禁用，改为使用右键控制）
         self.hide_button = QPushButton(" 隐藏")
-        self.hide_button.setStyleSheet(button_style)
-        self.hide_button.clicked.connect(self.hide_requested.emit)
+        self.hide_button.setStyleSheet(button_style + """
+            QPushButton {
+                color: #999;
+                background-color: #f5f5f5;
+            }
+            QPushButton:hover {
+                background-color: #f5f5f5;
+                border-color: #B0BEC5;
+            }
+        """)
+        self.hide_button.setEnabled(False)  # 禁用按钮
+        self.hide_button.setToolTip("请使用右键桌宠来隐藏")
+        # 不再连接信号
         outer_layout.addWidget(self.hide_button)
         
         # 退出按钮

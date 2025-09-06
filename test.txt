@@ -1,0 +1,23 @@
+# 这是一个示例配置文件
+database:
+  host: db.example.com
+  port: 3306
+  username: admin
+  password: new_secure_password_456
+
+server:
+  host: 127.0.0.1
+  port: 9000
+  debug: true
+
+# 功能开关
+features:
+  caching: active
+  logging: inactive
+  analytics: enabled
+
+# 数据库连接信息
+db_connection: mysql://admin:new_secure_password_456@db.example.com:3306/mydb
+
+# 注释：这是一个需要保留的旧配置示例
+# old_config: deprecated_value
