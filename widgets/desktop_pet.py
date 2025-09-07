@@ -1,107 +1,90 @@
+"""
+桌面宠物主窗口 - 专注于核心功能和UI管理
+"""
 import random
-from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout, QSystemTrayIcon, QMenu, QAction
-from PyQt5.QtCore import Qt, QPoint, QTimer, pyqtSignal, QThread
-from PyQt5.QtGui import QPixmap, QMouseEvent, QFont, QIcon
+import os
+from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout, QDesktopWidget
+from PyQt5.QtCore import Qt, QPoint, QTimer, pyqtSignal
+from PyQt5.QtGui import QPixmap
+from dotenv import load_dotenv
+
+# 导入重构后的模块
+from .threads import AIResponseThread, VisionProcessThread
+from .system_tray import SystemTrayManager
+from .event_handler import EventHandler
+
+# 导入其他组件
 from .input_window import InputWindow
 from .message_bubble import MessageBubble
 from .options_panel import OptionsPanel
-import os
-from dotenv import load_dotenv
+
+# 导入服务
 from services.chat import ChatService
 from services.vision import VisionService
 from services.screenshot_capture import ScreenshotCapture
+
+# 导入配置
 from config import PetConfig, BubbleConfig, SystemConfig
 
-# 创建一个工作线程类来处理AI响应
-class AIResponseThread(QThread):
-    response_chunk = pyqtSignal(str)
-    finished = pyqtSignal()
-    
-    def __init__(self, chat_service, message):
-        super().__init__()
-        self.chat_service = chat_service
-        self.message = message
-        
-    def run(self):
-        try:
-            for chunk in self.chat_service.process_message_stream(self.message):
-                self.response_chunk.emit(chunk)
-            self.finished.emit()
-        except Exception as e:
-            import random
-            self.response_chunk.emit('\n' + random.choice(SystemConfig.BACKUP_RESPONSES))
-            print(f"AI回复处理错误: {e}")
-
-# 创建一个工作线程类来处理VLM图片描述
-class VisionProcessThread(QThread):
-    vision_completed = pyqtSignal(str, str)  # 发射(final_message, original_message)
-    vision_failed = pyqtSignal(str, str)     # 发射(error_message, original_message)
-    
-    def __init__(self, vision_service, pixmap, message):
-        super().__init__()
-        self.vision_service = vision_service
-        self.pixmap = pixmap
-        self.message = message
-        
-    def run(self):
-        try:
-            # 使用VLM描述图片
-            image_description = self.vision_service.describe_image(self.pixmap, self.message)
-            
-            # 构建最终消息格式
-            if self.message.strip():
-                final_message = f"[图片：{image_description}]{{{self.message}}}"
-            else:
-                final_message = f"[图片：{image_description}]"
-            
-            self.vision_completed.emit(final_message, self.message)
-            
-        except Exception as e:
-            print(f"VLM线程处理失败: {e}")
-            import traceback
-            traceback.print_exc()
-            self.vision_failed.emit(str(e), self.message)
 
 class DesktopPet(QWidget):
     """桌面宠物主窗口"""
-    ai_response_ready = pyqtSignal(str)  # 添加这个信号
+    ai_response_ready = pyqtSignal(str)
     
     def __init__(self):
         super().__init__()
-        self.drag_position = QPoint()
+        
+        # 初始化组件变量
         self.input_window = None
         self.options_panel = None
         self.message_bubble = None
-        self.current_text = ""
-        self.full_text = ""
-        self.text_index = 0
-        self.is_dragging = False
         self.ai_thread = None
         self.vision_thread = None
+        self.screenshot_capture = None
         
-        # 防抖机制
-        self.right_click_timer = QTimer()
-        self.right_click_timer.setSingleShot(True)
-        self.right_click_timer.timeout.connect(self.handle_right_click_action)
-        self.debounce_delay = 200  # 200ms防抖延迟
+        # 初始化管理器
+        self.system_tray = SystemTrayManager(self)
+        self.event_handler = EventHandler(self)
+        
+        # 连接信号
+        self._connect_signals()
+        
+        # 加载环境变量
+        self._load_environment()
+        
+        # 初始化服务
+        self._init_services()
+        
+        # 初始化UI
+        self.init_ui()
+        
+        # 连接AI响应信号
+        self.ai_response_ready.connect(self.append_ai_response)
+        
+    def _connect_signals(self):
+        """连接各种信号"""
+        # 系统托盘信号
+        self.system_tray.show_requested.connect(self.show_from_tray)
+        self.system_tray.exit_requested.connect(self.close_application)
+        
+        # 事件处理信号
+        self.event_handler.right_click_detected.connect(self._handle_right_click_action)
+        self.event_handler.position_changed.connect(self.update_following_windows)
+        
+    def _load_environment(self):
+        """加载环境变量"""
         current_script_dir = os.path.dirname(os.path.abspath(__file__))
-
-        # 向上回退一级，找到项目根目录（即 .env 所在的目录）
         project_root_dir = os.path.dirname(current_script_dir)
-
-        # 构建 .env 文件的完整路径
         env_file_path = os.path.join(project_root_dir, '.env')
-
-        # 加载指定路径的 .env 文件
         load_dotenv(dotenv_path=env_file_path)
+        
+    def _init_services(self):
+        """初始化各种服务"""
         # 初始化AI聊天服务
-        api_key = os.getenv("API_KEY", "your_api_key_here")  # 从环境变量获取API密钥
-        base_url = os.getenv("BASE_URL", "https://api.example.com")
-        model = os.getenv("AGENT_MODEL", "")
-        # print("api_key:", api_key)
-        # print("base_url:", base_url)
-        # print("model:", model)
-        self.chat_service = ChatService(api_key,base_url,model)
+        api_key = os.getenv("API_KEY")
+        base_url = os.getenv("BASE_URL")
+        model = os.getenv("AGENT_MODEL")
+        self.chat_service = ChatService(api_key, base_url, model)
         
         # 初始化VLM服务
         try:
@@ -109,81 +92,7 @@ class DesktopPet(QWidget):
         except Exception as e:
             print(f"VLM服务初始化失败: {e}")
             self.vision_service = None
-        
-        # 截图捕获器
-        self.screenshot_capture = None
-        
-        # 移除预设回复列表
-        # self.responses = [...]
-        
-        # 初始化系统托盘
-        self.init_system_tray()
-        
-        self.init_ui()
-        
-        # 定时器用于检测位置变化
-        self.move_timer = QTimer()
-        self.move_timer.timeout.connect(self.check_position_change)
-        self.move_timer.start(PetConfig.POSITION_CHECK_INTERVAL)
-        
-        self.last_position = self.pos()
-        self.ai_response_ready.connect(self.append_ai_response)
-        
-    def init_system_tray(self):
-        """初始化系统托盘"""
-        # 检查系统是否支持托盘
-        if not QSystemTrayIcon.isSystemTrayAvailable():
-            print("系统不支持托盘功能")
-            return
             
-        # 创建托盘图标
-        self.tray_icon = QSystemTrayIcon(self)
-        
-        # 设置托盘图标（使用宠物图片或默认图标）
-        try:
-            if os.path.exists(PetConfig.PET_IMAGE_PATH):
-                icon = QIcon(PetConfig.PET_IMAGE_PATH)
-            else:
-                # 如果宠物图片不存在，创建一个简单的默认图标
-                pixmap = QPixmap(32, 32)
-                pixmap.fill(Qt.blue)
-                icon = QIcon(pixmap)
-            self.tray_icon.setIcon(icon)
-        except Exception as e:
-            print(f"设置托盘图标失败: {e}")
-            # 使用系统默认图标
-            self.tray_icon.setIcon(self.style().standardIcon(self.style().SP_ComputerIcon))
-        
-        # 设置托盘提示
-        self.tray_icon.setToolTip("Silver Wolf")
-        
-        # 创建托盘菜单
-        tray_menu = QMenu()
-        
-        # 显示动作
-        show_action = QAction("显示", self)
-        show_action.triggered.connect(self.show_from_tray)
-        tray_menu.addAction(show_action)
-        
-        # 分隔符
-        tray_menu.addSeparator()
-        
-        # 退出动作
-        quit_action = QAction("退出", self)
-        quit_action.triggered.connect(self.close_application)
-        tray_menu.addAction(quit_action)
-        
-        # 设置托盘菜单
-        self.tray_icon.setContextMenu(tray_menu)
-        
-        # 双击托盘图标显示窗口
-        self.tray_icon.activated.connect(self.tray_icon_activated)
-        
-    def tray_icon_activated(self, reason):
-        """托盘图标激活事件"""
-        if reason == QSystemTrayIcon.DoubleClick:
-            self.show_from_tray()
-        
     def init_ui(self):
         """初始化界面"""
         # 设置窗口属性
@@ -229,7 +138,6 @@ class DesktopPet(QWidget):
         
     def move_to_bottom_right(self):
         """将窗口移动到屏幕右下角"""
-        from PyQt5.QtWidgets import QDesktopWidget
         desktop = QDesktopWidget()
         screen_rect = desktop.availableGeometry()
         window_size = self.size()
@@ -238,41 +146,19 @@ class DesktopPet(QWidget):
         y = screen_rect.height() - window_size.height() - PetConfig.INITIAL_POSITION_OFFSET_Y
         
         self.move(x, y)
-        self.last_position = QPoint(x, y)
+        self.event_handler.update_last_position()
         
-    def mousePressEvent(self, event: QMouseEvent):
+    def mousePressEvent(self, event):
         """鼠标按下事件"""
-        if event.button() == Qt.LeftButton:
-            self.drag_position = event.globalPos() - self.frameGeometry().topLeft()
-            self.is_dragging = True
-            event.accept()
-        elif event.button() == Qt.RightButton:
-            # 使用防抖机制处理右键点击
-            self.right_click_timer.start(self.debounce_delay)
-            event.accept()
+        self.event_handler.handle_mouse_press(event)
             
-    def mouseMoveEvent(self, event: QMouseEvent):
+    def mouseMoveEvent(self, event):
         """鼠标移动事件（拖拽）"""
-        if event.buttons() == Qt.LeftButton and not self.drag_position.isNull():
-            self.move(event.globalPos() - self.drag_position)
-            # 实时更新跟随窗口位置
-            self.update_following_windows()
-            event.accept()
+        self.event_handler.handle_mouse_move(event)
             
-    def mouseReleaseEvent(self, event: QMouseEvent):
+    def mouseReleaseEvent(self, event):
         """鼠标释放事件"""
-        if event.button() == Qt.LeftButton:
-            self.is_dragging = False
-            self.last_position = self.pos()
-            event.accept()
-            
-    def check_position_change(self):
-        """检查位置变化并更新跟随窗口"""
-        if not self.is_dragging:
-            current_pos = self.pos()
-            if current_pos != self.last_position:
-                self.update_following_windows()
-                self.last_position = current_pos
+        self.event_handler.handle_mouse_release(event)
                 
     def update_following_windows(self):
         """更新所有跟随窗口的位置"""
@@ -283,7 +169,7 @@ class DesktopPet(QWidget):
         if self.message_bubble and self.message_bubble.isVisible():
             self.message_bubble.update_position()
             
-    def handle_right_click_action(self):
+    def _handle_right_click_action(self):
         """处理右键点击的实际逻辑（防抖后执行）"""
         # 检查当前状态并决定相应的行为
         input_visible = self.input_window and self.input_window.isVisible()
@@ -359,8 +245,8 @@ class DesktopPet(QWidget):
         
         self.input_window.raise_()
         self.options_panel.raise_()
-        self.input_window.focus_input()
-        
+        self.input_window.focus_input()     
+   
     def handle_message(self, message, image=None):
         """处理收到的消息"""
         if message.strip() or image:
@@ -559,7 +445,7 @@ class DesktopPet(QWidget):
             if current_text == "思考中..." or (current_text.strip().startswith(">") and not any(c.isalnum() and not c.isascii() for c in current_text.replace(">", "").replace("工具调用", "").replace("：", ""))):
                 current_text = ""
             new_text = current_text + text_chunk
-            print(text_chunk,end="")
+            print(text_chunk, end="")
             self.message_bubble.set_text(new_text)
             self.message_bubble.update_position()
 
@@ -615,7 +501,7 @@ class DesktopPet(QWidget):
             self.ai_response_ready.emit(response)
         except Exception as e:
             # 出错时使用备用回复
-            self.ai_response_ready.emit(random.choice('\n'+SystemConfig.BACKUP_RESPONSES))
+            self.ai_response_ready.emit(random.choice('\n' + SystemConfig.BACKUP_RESPONSES))
             print(e)
 
     def close_application(self):
@@ -624,8 +510,7 @@ class DesktopPet(QWidget):
         import sys
         
         # 隐藏系统托盘图标
-        if hasattr(self, 'tray_icon'):
-            self.tray_icon.hide()
+        self.system_tray.hide_tray_icon()
             
         # 执行真正的关闭流程
         self._real_close()
@@ -658,15 +543,11 @@ class DesktopPet(QWidget):
             self.hide()
             
             # 显示系统托盘图标
-            if hasattr(self, 'tray_icon'):
-                self.tray_icon.show()
-                # 显示托盘消息提示
-                self.tray_icon.showMessage(
-                    "桌面宠物",
-                    "已隐藏到系统托盘，右键托盘图标可以重新显示",
-                    QSystemTrayIcon.Information,
-                    3000  # 3秒后自动消失
-                )
+            self.system_tray.show_tray_icon()
+            self.system_tray.show_message(
+                "桌面宠物",
+                "已隐藏到系统托盘，右键托盘图标可以重新显示"
+            )
             
             print("已隐藏到系统托盘")
             
@@ -682,8 +563,7 @@ class DesktopPet(QWidget):
             self.activateWindow()
             
             # 隐藏系统托盘图标
-            if hasattr(self, 'tray_icon'):
-                self.tray_icon.hide()
+            self.system_tray.hide_tray_icon()
             
             print("已从系统托盘恢复显示")
             
@@ -693,7 +573,7 @@ class DesktopPet(QWidget):
     def closeEvent(self, event):
         """关闭事件 - 隐藏到托盘而不是退出"""
         # 如果系统托盘可用，隐藏到托盘
-        if hasattr(self, 'tray_icon') and QSystemTrayIcon.isSystemTrayAvailable():
+        if self.system_tray.is_available():
             self.hide_to_tray()
             event.ignore()  # 忽略关闭事件，不真正关闭
         else:
@@ -703,19 +583,14 @@ class DesktopPet(QWidget):
             
     def _real_close(self):
         """真正的关闭流程"""
-        # 停止定时器
-        if hasattr(self, 'move_timer') and self.move_timer:
-            self.move_timer.stop()
-        if hasattr(self, 'right_click_timer') and self.right_click_timer:
-            self.right_click_timer.stop()
-        if hasattr(self, 'timer') and hasattr(self, 'timer') and self.timer:
-            self.timer.stop()
+        # 停止事件处理器的定时器
+        self.event_handler.stop_timers()
         
         # 停止AI线程和VLM线程
-        if hasattr(self, 'ai_thread') and self.ai_thread and self.ai_thread.isRunning():
+        if self.ai_thread and self.ai_thread.isRunning():
             self.ai_thread.terminate()
             self.ai_thread.wait()
-        if hasattr(self, 'vision_thread') and self.vision_thread and self.vision_thread.isRunning():
+        if self.vision_thread and self.vision_thread.isRunning():
             self.vision_thread.terminate()
             self.vision_thread.wait()
         
