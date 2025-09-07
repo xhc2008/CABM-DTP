@@ -63,6 +63,25 @@ class PetConfig:
     POSITION_CHECK_INTERVAL = 50
 
 
+# 宠物装饰配置
+class PetDecorationConfig:
+    """宠物装饰相关配置"""
+    # 思考超时时间（毫秒）- 超过这个时间显示加载圈
+    THINKING_TIMEOUT = 0  # 3秒
+    
+    # 加载圈配置
+    LOADING_SPINNER_SIZE = 24  # 加载圈大小
+    LOADING_SPINNER_OFFSET_X = 20  # 相对于宠物中心的X偏移
+    LOADING_SPINNER_OFFSET_Y = 20  # 相对于宠物顶部的Y偏移
+    LOADING_SPINNER_ANIMATION_SPEED = 80  # 动画更新间隔（毫秒）
+    LOADING_SPINNER_ROTATION_STEP = 15  # 每次旋转角度
+    
+    # 加载圈样式
+    LOADING_SPINNER_COLOR = (100, 150, 255)  # RGB颜色
+    LOADING_SPINNER_LINE_WIDTH = 2  # 线条宽度
+    LOADING_SPINNER_DOTS = 8  # 圆点数量
+
+
 # 消息气泡配置
 class BubbleConfig:
     """消息气泡相关配置"""
@@ -201,6 +220,7 @@ RAG_CONFIG = {
 __all__ = [
     'ChatConfig',
     'PetConfig', 
+    'PetDecorationConfig',
     'BubbleConfig',
     'InputConfig',
     'OptionsConfig',

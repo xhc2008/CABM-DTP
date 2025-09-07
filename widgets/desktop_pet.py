@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 from .threads import AIResponseThread, VisionProcessThread
 from .system_tray import SystemTrayManager
 from .event_handler import EventHandler
+from .pet_decorations import PetDecorationManager
 
 # 导入其他组件
 from .input_window import InputWindow
@@ -25,6 +26,7 @@ from services.screenshot_capture import ScreenshotCapture
 
 # 导入配置
 from config import PetConfig, BubbleConfig, SystemConfig
+
 
 
 class DesktopPet(QWidget):
@@ -41,6 +43,9 @@ class DesktopPet(QWidget):
         self.ai_thread = None
         self.vision_thread = None
         self.screenshot_capture = None
+        
+        # 初始化装饰管理器
+        self.decoration_manager = PetDecorationManager(self)
         
         # 初始化管理器
         self.system_tray = SystemTrayManager(self)
@@ -168,6 +173,8 @@ class DesktopPet(QWidget):
             self.options_panel.update_position()
         if self.message_bubble and self.message_bubble.isVisible():
             self.message_bubble.update_position()
+        # 更新装饰位置
+        self.decoration_manager.update_loading_spinner_position()
             
     def _handle_right_click_action(self):
         """处理右键点击的实际逻辑（防抖后执行）"""
@@ -193,6 +200,9 @@ class DesktopPet(QWidget):
             
     def interrupt_message_and_show_input(self):
         """打断消息气泡并显示输入框和选项栏"""
+        # 停止思考定时器和加载圈
+        self.decoration_manager.stop_thinking_timer()
+        
         # 停止AI线程
         if self.ai_thread and self.ai_thread.isRunning():
             self.ai_thread.terminate()
@@ -288,10 +298,12 @@ class DesktopPet(QWidget):
         try:
             print(f"VLM处理完成: {final_message[:100]}...")
             
-            # 更新提示为"思考中..."
+            # 更新提示为"思考中..."并重新启动思考定时器
             if self.message_bubble:
                 self.message_bubble.set_text("思考中...")
                 self.message_bubble.update_position()
+                # 重新启动思考定时器，因为现在开始真正的AI思考
+                self.decoration_manager.start_thinking_timer()
             
             # 发送给LLM处理
             self.process_ai_response_stream(final_message)
@@ -310,6 +322,9 @@ class DesktopPet(QWidget):
         """VLM处理失败回调"""
         try:
             print(f"VLM处理失败: {error_message}")
+            
+            # 停止思考定时器
+            self.decoration_manager.stop_thinking_timer()
             
             # 显示错误信息
             if self.message_bubble:
@@ -416,6 +431,9 @@ class DesktopPet(QWidget):
         self.message_bubble = MessageBubble(self)
         self.message_bubble.set_text("思考中...")
         
+        # 启动思考超时定时器（3秒后显示加载圈）
+        self.decoration_manager.start_thinking_timer()
+        
         # 隐藏输入框，但保持选项栏显示
         if self.input_window:
             self.input_window.close()
@@ -439,6 +457,9 @@ class DesktopPet(QWidget):
 
     def append_ai_response(self, text_chunk):
         """追加AI回复文本块"""
+        # AI开始响应时，停止思考定时器和加载圈
+        self.decoration_manager.stop_thinking_timer()
+        
         if self.message_bubble:
             current_text = self.message_bubble.get_current_text()
             # 如果当前文本是"思考中..."或者只包含工具调用信息（以">"开头），则清空
@@ -464,6 +485,9 @@ class DesktopPet(QWidget):
             
     def hide_message_bubble(self):
         """隐藏消息气泡"""
+        # 停止思考定时器和加载圈
+        self.decoration_manager.stop_thinking_timer()
+        
         if self.message_bubble:
             self.message_bubble.close()
             self.message_bubble = None
@@ -481,8 +505,12 @@ class DesktopPet(QWidget):
         self.ai_thread.finished.connect(self.on_ai_response_finished)
         self.ai_thread.start()
 
+
     def on_ai_response_finished(self):
         """AI响应完成后的处理"""
+        # 停止思考定时器和加载圈
+        self.decoration_manager.stop_thinking_timer()
+        
         # 流式响应完成后，设置自动隐藏定时器
         # 注意：这个定时器必须在主线程中创建
         QTimer.singleShot(BubbleConfig.AUTO_HIDE_DELAY, self.hide_message_bubble)
@@ -585,6 +613,9 @@ class DesktopPet(QWidget):
         """真正的关闭流程"""
         # 停止事件处理器的定时器
         self.event_handler.stop_timers()
+        
+        # 清理装饰
+        self.decoration_manager.cleanup()
         
         # 停止AI线程和VLM线程
         if self.ai_thread and self.ai_thread.isRunning():
