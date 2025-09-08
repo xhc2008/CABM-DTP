@@ -1,6 +1,7 @@
 import json
 import requests
 import re
+import sys
 import os
 import importlib.util
 from datetime import datetime
@@ -28,7 +29,13 @@ class ChatService:
     
     def _load_tools_from_directory(self):
         """从tools/目录动态加载所有工具"""
-        tools_dir = "tools"
+        if getattr(sys, 'frozen', False):
+            # 打包后的情况 - 使用 _MEIPASS 路径
+            base_path = sys._MEIPASS
+            tools_dir = os.path.join(base_path, 'tools')
+        else:
+            # 开发时的情况
+            tools_dir = "tools"
         successful_tools = []
         failed_tools = []
         
