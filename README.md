@@ -39,7 +39,7 @@ VISION_MODEL=Qwen/Qwen2.5-VL-32B-Instruct
 ```
 
 ### 4. 运行应用
-双击`start.bat`启动。启动后有几秒的延迟，不要重复启动
+双击`start.bat`启动。启动后可能会有几秒的延迟，不要重复启动
 
 使用`start-debug.bat`启动可以不隐藏后台。建议首次启动时使用这个，确认没问题了再使用`start.bat`
 
@@ -67,7 +67,7 @@ VISION_MODEL=Qwen/Qwen2.5-VL-32B-Instruct
 - 项目依赖 PyQt5，请确保系统支持 GUI 显示
 - 由于AI生成的不确定性，某些工具可能会造成风险（例如删文件）
 - 目前仅支持单宠物实例运行
-- 如果你想在非Windows下运行，除了改启动方式，还要改一下`config.py`的`ChatConfig.system_prompt`
+- 本项目仅支持Windows。理论上也支持Windows以外的操作系统，但大概率不行
 
 ## 贡献
 目前可能不太会接受Pull Requests

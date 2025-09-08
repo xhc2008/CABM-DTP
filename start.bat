@@ -1,12 +1,11 @@
 @echo off
 chdir /d "%~dp0"
 chcp 65001 >nul
-:: 检测是否管理员模式
 net session >nul 2>&1
 if %errorLevel% equ 0 (
     echo [Admin Mode] Running in background...
 ) else (
-    echo 这里写了啥不重要，反正你也看不清
+    echo [Normal Mode] Running in background...
 )
 
 echo Set WshShell = CreateObject("WScript.Shell") > temp.vbs

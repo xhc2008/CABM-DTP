@@ -2,65 +2,7 @@ from .Retriever import *
 from typing import List, Literal, Dict, Union
 import traceback
 import os
-try:
-    import torch
-    from transformers import AutoTokenizer, AutoModel
-    class Embedding_Model:
-        def __init__(self, 
-                     emb_model_name_or_path, 
-                     max_len: int = 512, 
-                     bath_size: int = 64, 
-                     device: Literal['cuda', 'cpu'] = None):
-            logger.info('初始化Embedding_Model: %s', emb_model_name_or_path)
-            if 'bge' in emb_model_name_or_path:
-                self.DEFAULT_QUERY_BGE_INSTRUCTION_ZH = "为这个句子生成表示以用于检索相关文章："
-            else:
-                self.DEFAULT_QUERY_BGE_INSTRUCTION_ZH = ""
-            self.emb_model_name_or_path = emb_model_name_or_path
-            if device is None:
-                device = 'cuda' if torch.cuda.is_available() else 'cpu'
-            else: 
-                device = torch.device(device)
-            self.device = device
-            self.batch_size = bath_size
-            self.max_len = max_len
-            
-            self.model = AutoModel.from_pretrained(emb_model_name_or_path, trust_remote_code=True).half().to(device)
-            self.tokenizer = AutoTokenizer.from_pretrained(emb_model_name_or_path, trust_remote_code=True)
 
-        def embed(self, texts: Union[List[str], str]) -> List[List[float]]:
-            if isinstance(texts, str):
-                texts = [texts]
-                
-            num_texts = len(texts)
-            texts = [t.replace("\n", " ") for t in texts]
-            sentence_embeddings = []
-
-            for start in tqdm(range(0, num_texts, self.batch_size), desc='Model批量嵌入文本'):
-                end = min(start + self.batch_size, num_texts)
-                batch_texts = texts[start:end]
-                batch_texts = [self.DEFAULT_QUERY_BGE_INSTRUCTION_ZH+x for x in batch_texts]
-                encoded_input = self.tokenizer(batch_texts, max_length=self.max_len, padding=True, truncation=True,
-                                            return_tensors='pt').to(self.device)
-
-                with torch.no_grad():
-                    model_output = self.model(**encoded_input)
-                    # Perform pooling. In this case, cls pooling.
-                    if 'gte' in self.emb_model_name_or_path:
-                        batch_embeddings = model_output.last_hidden_state[:, 0]
-                    else:
-                        batch_embeddings = model_output[0][:, 0]
-                    batch_embeddings = torch.nn.functional.normalize(batch_embeddings, p=2, dim=1)
-                    sentence_embeddings.extend(batch_embeddings.tolist())
-
-            return sentence_embeddings
-        
-        def __call__(self, *args, **kwds):
-            return self.embed(*args, **kwds)
-except ImportError:
-    logger.info('torch或transformers未安装. 无法使用Embedding_Model')
-    Embedding_Model = None
-    
 try:
     from openai import OpenAI
     class Embedding_API:
@@ -112,7 +54,7 @@ except ImportError:
     raise ImportError("numpy 未安装. 无法使用索引向量数据库")
 
 embed_dict = {
-    'Model': Embedding_Model,
+    #'Model': Embedding_Model,
     'API': Embedding_API
 }
 '''
