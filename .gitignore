@@ -12,6 +12,7 @@ data/
 # 编译输出
 dist/
 build/
+test/
 *.o
 *.class
 log.txt
