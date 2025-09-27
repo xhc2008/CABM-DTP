@@ -68,7 +68,7 @@ def typing_text(text: Union[List[str], str], press_enter: bool = True) -> Dict[s
         pyautogui.PAUSE = 0.05  # 设置默认间隔
         
         # 输入前的延迟，确保用户有时间切换到目标窗口
-        time.sleep(1)
+        time.sleep(0.5)
         
         # 记录开始时间
         start_time = time.time()

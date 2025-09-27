@@ -24,7 +24,7 @@ class ChatConfig:
     "read_notes": "正在翻小本本...",
     "recollect": "别吵，我在思考...",
     "modify_file": "正在修改文件，别乱动...",
-    "typing": "正在敲键盘...",
+    "typing_text": "正在敲键盘...",
     }
     # 最大工具调用轮次，防止无限循环 (来自 chat.py line 144)
     MAX_TOOL_CALLS = 8
