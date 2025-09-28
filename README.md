@@ -59,6 +59,7 @@ VISION_MODEL=Qwen/Qwen2.5-VL-32B-Instruct
 - **run_python**: 创建一个Python程序并执行，等待执行完毕后获取输出
 - **read_notes**: 从记录的笔记中检索相关信息
 - **recollect**: 回忆以前的对话和事件
+- **typing_text**: 往当前用户激活的文本框里输入文字
 - **自定义工具**：按照相同的格式写好放入tools/即可
 
 ## 注意事项

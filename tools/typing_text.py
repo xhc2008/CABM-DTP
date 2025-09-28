@@ -10,7 +10,7 @@ tool_definition = {
     "type": "function",
     "function": {
         "name": "typing_text",
-        "description": "在用户激活的文本输入框输入文本",
+        "description": "在用户激活的文本输入框输入文本，常用于发送消息",
         "parameters": {
             "type": "object",
             "properties": {
@@ -68,7 +68,7 @@ def typing_text(text: Union[List[str], str], press_enter: bool = True) -> Dict[s
         pyautogui.PAUSE = 0.05  # 设置默认间隔
         
         # 输入前的延迟，确保用户有时间切换到目标窗口
-        time.sleep(0.5)
+        # time.sleep(0.5)
         
         # 记录开始时间
         start_time = time.time()
