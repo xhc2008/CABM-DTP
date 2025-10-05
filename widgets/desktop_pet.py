@@ -66,6 +66,9 @@ class DesktopPet(QWidget):
         # 连接AI响应信号
         self.ai_response_ready.connect(self.append_ai_response)
         
+        # 根据配置决定是否隐藏后台窗口
+        self._apply_console_startup_config()
+        
     def _connect_signals(self):
         """连接各种信号"""
         # 系统托盘信号
@@ -592,6 +595,29 @@ class DesktopPet(QWidget):
             
         except Exception as e:
             print(f"显示失败: {e}")
+    
+    def _apply_console_startup_config(self):
+        """应用启动时的后台窗口配置"""
+        from config import SystemConfig
+        
+        if SystemConfig.HIDE_CONSOLE_ON_STARTUP:
+            try:
+                import ctypes
+                
+                # 获取控制台窗口句柄
+                kernel32 = ctypes.windll.kernel32
+                user32 = ctypes.windll.user32
+                
+                console_window = kernel32.GetConsoleWindow()
+                
+                if console_window:
+                    # 隐藏控制台窗口
+                    user32.ShowWindow(console_window, 0)  # SW_HIDE = 0
+                    self.system_tray.update_console_menu_state(False)
+                    print("启动时已隐藏后台窗口")
+                    
+            except Exception as e:
+                print(f"启动时隐藏后台窗口失败: {e}")
     
     def toggle_console_window(self):
         """切换后台窗口显示/隐藏"""

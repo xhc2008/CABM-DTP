@@ -169,6 +169,9 @@ class SystemConfig:
     # 环境变量文件路径
     ENV_FILE_PATH = ".env"
     
+    # 启动时是否隐藏后台窗口
+    HIDE_CONSOLE_ON_STARTUP = True
+    
     # 备用回复列表（当AI服务不可用时使用）
     BACKUP_RESPONSES = [
         "> ERROR: 请查看后台信息",
