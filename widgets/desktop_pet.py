@@ -40,6 +40,7 @@ class DesktopPet(QWidget):
         self.input_window = None
         self.options_panel = None
         self.message_bubble = None
+        self.bubble_hide_timer = None  # 保存气泡隐藏计时器的引用
         self.ai_thread = None
         self.vision_thread = None
         self.screenshot_capture = None
@@ -335,8 +336,13 @@ class DesktopPet(QWidget):
             if self.message_bubble:
                 self.message_bubble.set_text(f"图片处理失败: {error_message}")
                 self.message_bubble.update_position()
-                # 3秒后隐藏错误消息
-                QTimer.singleShot(3000, self.hide_message_bubble)
+                # 取消之前的计时器并设置新的3秒后隐藏错误消息
+                if self.bubble_hide_timer:
+                    self.bubble_hide_timer.stop()
+                self.bubble_hide_timer = QTimer()
+                self.bubble_hide_timer.setSingleShot(True)
+                self.bubble_hide_timer.timeout.connect(self.hide_message_bubble)
+                self.bubble_hide_timer.start(3000)
             
             # 如果有文本消息，继续处理文本
             if original_message.strip():
@@ -360,7 +366,13 @@ class DesktopPet(QWidget):
             print(f"文本处理也失败: {e}")
             if self.message_bubble:
                 self.message_bubble.set_text("处理失败，请重试")
-                QTimer.singleShot(3000, self.hide_message_bubble)
+                # 取消之前的计时器并设置新的3秒后隐藏错误消息
+                if self.bubble_hide_timer:
+                    self.bubble_hide_timer.stop()
+                self.bubble_hide_timer = QTimer()
+                self.bubble_hide_timer.setSingleShot(True)
+                self.bubble_hide_timer.timeout.connect(self.hide_message_bubble)
+                self.bubble_hide_timer.start(3000)
                 
     def start_screenshot(self):
         """开始截图"""
@@ -429,6 +441,11 @@ class DesktopPet(QWidget):
             
     def prepare_message_bubble(self):
         """准备消息气泡用于流式显示"""
+        # 取消之前的隐藏计时器
+        if self.bubble_hide_timer:
+            self.bubble_hide_timer.stop()
+            self.bubble_hide_timer = None
+            
         # 创建消息气泡
         if self.message_bubble:
             self.message_bubble.close()
@@ -477,21 +494,36 @@ class DesktopPet(QWidget):
 
     def show_ai_response(self, response):
         """显示AI回复（保持兼容性）"""
+        # 取消之前的隐藏计时器
+        if self.bubble_hide_timer:
+            self.bubble_hide_timer.stop()
+            
         if self.message_bubble:
             self.message_bubble.set_text(response)
             self.message_bubble.update_position()
             # 自动隐藏
-            QTimer.singleShot(BubbleConfig.AUTO_HIDE_DELAY, self.hide_message_bubble)
+            self.bubble_hide_timer = QTimer()
+            self.bubble_hide_timer.setSingleShot(True)
+            self.bubble_hide_timer.timeout.connect(self.hide_message_bubble)
+            self.bubble_hide_timer.start(BubbleConfig.AUTO_HIDE_DELAY)
         else:
             # 如果没有气泡，创建一个
             self.prepare_message_bubble()
             self.message_bubble.set_text(response)
-            QTimer.singleShot(BubbleConfig.AUTO_HIDE_DELAY, self.hide_message_bubble)
+            self.bubble_hide_timer = QTimer()
+            self.bubble_hide_timer.setSingleShot(True)
+            self.bubble_hide_timer.timeout.connect(self.hide_message_bubble)
+            self.bubble_hide_timer.start(BubbleConfig.AUTO_HIDE_DELAY)
             
     def hide_message_bubble(self):
         """隐藏消息气泡"""
         # 停止思考定时器和加载圈
         self.decoration_manager.stop_thinking_timer()
+        
+        # 取消隐藏计时器
+        if self.bubble_hide_timer:
+            self.bubble_hide_timer.stop()
+            self.bubble_hide_timer = None
         
         if self.message_bubble:
             self.message_bubble.close()
@@ -516,9 +548,16 @@ class DesktopPet(QWidget):
         # 停止思考定时器和加载圈
         self.decoration_manager.stop_thinking_timer()
         
+        # 取消之前的隐藏计时器
+        if self.bubble_hide_timer:
+            self.bubble_hide_timer.stop()
+        
         # 流式响应完成后，设置自动隐藏定时器
         # 注意：这个定时器必须在主线程中创建
-        QTimer.singleShot(BubbleConfig.AUTO_HIDE_DELAY, self.hide_message_bubble)
+        self.bubble_hide_timer = QTimer()
+        self.bubble_hide_timer.setSingleShot(True)
+        self.bubble_hide_timer.timeout.connect(self.hide_message_bubble)
+        self.bubble_hide_timer.start(BubbleConfig.AUTO_HIDE_DELAY)
         
         # 清理线程
         if self.ai_thread:

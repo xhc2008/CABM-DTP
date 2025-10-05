@@ -56,7 +56,7 @@ VISION_MODEL=Qwen/Qwen2.5-VL-32B-Instruct
 - **modify_file**: 修改文本或代码文件的内容
 - **execute_command**: 在cmd中执行一条或多条指令，并等待执行完毕后获取输出
 - **execute_command_async**: 在cmd中连续执行一条或多条指令，但不等待执行完成
-- **run_python**: 创建一个Python程序并执行，等待执行完毕后获取输出
+- **run_python**: 创建一个Python程序并执行，等待执行完毕后获取输出（需要安装python）
 - **read_notes**: 从记录的笔记中检索相关信息
 - **recollect**: 回忆以前的对话和事件
 - **typing_text**: 往当前用户激活的文本框里输入文字
@@ -67,7 +67,7 @@ VISION_MODEL=Qwen/Qwen2.5-VL-32B-Instruct
 - 需要有效的硅基流动 API 密钥才能使用 AI 功能
 - 项目依赖 PyQt5，请确保系统支持 GUI 显示
 - 由于AI生成的不确定性，某些工具可能会造成风险（例如删文件）
-- 目前仅支持单宠物实例运行
+- 目前仅支持单宠物实例运行，多实例可能会导致混乱
 - 本项目仅支持Windows。理论上也支持Windows以外的操作系统，但大概率不行
 
 ## 贡献
