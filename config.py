@@ -133,15 +133,16 @@ class OptionsConfig:
     """选项栏相关配置"""
     # 窗口大小
     PANEL_WIDTH = 70
-    PANEL_HEIGHT = 130
+    PANEL_HEIGHT = 100
     
     # 位置配置
-    PANEL_OFFSET_X = 25  # 相对于宠物右侧的X偏移
-    PANEL_OFFSET_Y = 100  # 相对于宠物的Y偏移
+    PANEL_OFFSET_X = -10  # 相对于宠物右侧的X偏移
+    PANEL_OFFSET_Y = 80  # 相对于宠物的Y偏移
     
     # 按钮配置
     BUTTON_HEIGHT = 7
-    BUTTON_SPACING = 4
+    BUTTON_SPACING = 1  # 按钮间距
+    BUTTON_WIDTH = 40  # 按钮宽度
     
     # 样式配置
     BACKGROUND_COLOR = "rgba(240, 248, 255, 0.95)"  # 背景色
