@@ -16,8 +16,12 @@ class OptionsPanel(QWidget):
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
         self.setAttribute(Qt.WA_TranslucentBackground)
         
-        self.buttons = []  # 存储按钮引用
+        self.all_buttons = []  # 存储所有功能按钮
+        self.visible_buttons = []  # 当前页显示的按钮
         self.animations = []  # 存储动画引用
+        
+        self.current_page = 0  # 当前页码
+        self.buttons_per_page = 3  # 每页显示的按钮数
         
         self.setup_ui()
         
@@ -36,7 +40,7 @@ class OptionsPanel(QWidget):
                 border-radius: 6px;
                 padding: 3px;
                 margin: 0px;
-                text-align: left;
+                text-align: centre;
                 font-size: {OptionsConfig.BUTTON_FONT_SIZE}pt;
                 color: #333;
                 min-height: {OptionsConfig.BUTTON_HEIGHT}px;
@@ -52,23 +56,58 @@ class OptionsPanel(QWidget):
             }}
         """
         
+        # 计算翻页按钮宽度：需要考虑边框和padding的额外宽度
+        # border: 1px * 2 (左右) = 2px, padding: 3px * 2 (左右) = 6px, 总共8px
+        button_extra_width = 8  # 边框和padding的额外宽度
+        page_button_spacing = 2  # 按钮间距
+        # 总宽度 = BUTTON_WIDTH + button_extra_width，两个按钮平分，减去间距
+        page_button_width = (OptionsConfig.BUTTON_WIDTH + button_extra_width - page_button_spacing) // 2 - button_extra_width
+        
+        # 翻页按钮样式
+        page_button_style = f"""
+            QPushButton {{
+                background-color: {OptionsConfig.NORMAL_BUTTON_COLOR};
+                border: 1px solid #B0BEC5;
+                border-radius: 6px;
+                padding: 3px;
+                margin: 0px;
+                text-align: center;
+                font-size: {OptionsConfig.BUTTON_FONT_SIZE}pt;
+                color: #333;
+                min-height: {OptionsConfig.BUTTON_HEIGHT}px;
+                min-width: {page_button_width}px;
+                max-width: {page_button_width}px;
+            }}
+            QPushButton:hover {{
+                background-color: {OptionsConfig.HOVER_BUTTON_COLOR};
+                border-color: #2196F3;
+            }}
+            QPushButton:pressed {{
+                background-color: {OptionsConfig.PRESSED_BUTTON_COLOR};
+            }}
+            QPushButton:disabled {{
+                background-color: #E0E0E0;
+                color: #999;
+                border-color: #CCC;
+            }}
+        """
+        
+        # 创建所有功能按钮（但不添加到布局）
         # 截图按钮
-        self.screenshot_button = QPushButton(" 截图")
+        self.screenshot_button = QPushButton("截图")
         self.screenshot_button.setStyleSheet(button_style)
         self.screenshot_button.clicked.connect(self.screenshot_requested.emit)
-        main_layout.addWidget(self.screenshot_button)
-        self.buttons.append(self.screenshot_button)
+        self.all_buttons.append(self.screenshot_button)
         
         # 隐藏按钮
-        self.hide_button = QPushButton(" 隐藏")
+        self.hide_button = QPushButton("隐藏")
         self.hide_button.setStyleSheet(button_style)
         self.hide_button.setToolTip("隐藏到系统托盘")
         self.hide_button.clicked.connect(self.hide_requested.emit)
-        main_layout.addWidget(self.hide_button)
-        self.buttons.append(self.hide_button)
+        self.all_buttons.append(self.hide_button)
         
         # 退出按钮
-        self.exit_button = QPushButton(" 退出")
+        self.exit_button = QPushButton("退出")
         self.exit_button.setStyleSheet(button_style + f"""
             QPushButton {{
                 color: {OptionsConfig.EXIT_BUTTON_COLOR};
@@ -79,19 +118,125 @@ class OptionsPanel(QWidget):
             }}
         """)
         self.exit_button.clicked.connect(self.confirm_exit)
-        main_layout.addWidget(self.exit_button)
-        self.buttons.append(self.exit_button)
+        self.all_buttons.append(self.exit_button)
         
-        # 为每个按钮设置透明度效果
-        for button in self.buttons:
-            opacity_effect = QGraphicsOpacityEffect(button)
-            opacity_effect.setOpacity(0)  # 初始完全透明
-            button.setGraphicsEffect(opacity_effect)
+        # 临时演示按钮
+        demo_button1 = QPushButton("空白")
+        demo_button1.setStyleSheet(button_style)
+        demo_button1.clicked.connect(lambda: print("功能1被点击"))
+        self.all_buttons.append(demo_button1)
+        
+        demo_button2 = QPushButton("空白")
+        demo_button2.setStyleSheet(button_style)
+        demo_button2.clicked.connect(lambda: print("功能2被点击"))
+        self.all_buttons.append(demo_button2)
+        
+        demo_button3 = QPushButton("空白")
+        demo_button3.setStyleSheet(button_style)
+        demo_button3.clicked.connect(lambda: print("功能3被点击"))
+        self.all_buttons.append(demo_button3)
+        
+        demo_button4 = QPushButton("空白")
+        demo_button4.setStyleSheet(button_style)
+        demo_button4.clicked.connect(lambda: print("功能4被点击"))
+        self.all_buttons.append(demo_button4)
+        
+        # 创建翻页按钮容器（放在最上面）
+        page_controls = QWidget()
+        page_controls.setFixedWidth(OptionsConfig.BUTTON_WIDTH + button_extra_width)  # 设置固定宽度，考虑边框和padding
+        page_layout = QHBoxLayout(page_controls)
+        page_layout.setContentsMargins(0, 0, 0, 0)
+        page_layout.setSpacing(page_button_spacing)
+        
+        # 上一页按钮
+        self.prev_button = QPushButton("<")
+        self.prev_button.setStyleSheet(page_button_style)
+        self.prev_button.clicked.connect(self.prev_page)
+        page_layout.addWidget(self.prev_button, 0, Qt.AlignLeft)  # 左对齐，不拉伸
+        
+        # 下一页按钮
+        self.next_button = QPushButton(">")
+        self.next_button.setStyleSheet(page_button_style)
+        self.next_button.clicked.connect(self.next_page)
+        page_layout.addWidget(self.next_button, 0, Qt.AlignRight)  # 右对齐，不拉伸
+        
+        main_layout.addWidget(page_controls)
+        
+        # 创建按钮容器（用于显示当前页的按钮）
+        self.buttons_container = QWidget()
+        self.buttons_layout = QVBoxLayout(self.buttons_container)
+        self.buttons_layout.setContentsMargins(0, 0, 0, 0)
+        self.buttons_layout.setSpacing(OptionsConfig.BUTTON_SPACING)
+        main_layout.addWidget(self.buttons_container)
+        
+        # 页码标签（放在最下面，单独一行）
+        self.page_label = QLabel()
+        self.page_label.setFixedWidth(OptionsConfig.BUTTON_WIDTH + button_extra_width)  # 设置固定宽度，考虑边框和padding
+        self.page_label.setAlignment(Qt.AlignCenter)
+        self.page_label.setStyleSheet(f"color: #666; font-size: {OptionsConfig.BUTTON_FONT_SIZE}pt;")
+        main_layout.addWidget(self.page_label)
+        
+        # 显示第一页
+        self.update_page()
         
         # 设置固定宽度，高度自适应按钮和间距
         self.setFixedWidth(OptionsConfig.PANEL_WIDTH + 20)
         # 让布局自动计算高度
         self.adjustSize()
+    
+    def update_page(self):
+        """更新当前页显示的按钮"""
+        # 清空当前显示的按钮
+        for button in self.visible_buttons:
+            self.buttons_layout.removeWidget(button)
+            button.hide()
+        self.visible_buttons.clear()
+        
+        # 计算总页数
+        total_pages = (len(self.all_buttons) + self.buttons_per_page - 1) // self.buttons_per_page
+        
+        # 计算当前页的按钮范围
+        start_idx = self.current_page * self.buttons_per_page
+        end_idx = min(start_idx + self.buttons_per_page, len(self.all_buttons))
+        
+        # 添加当前页的按钮
+        for i in range(start_idx, end_idx):
+            button = self.all_buttons[i]
+            self.buttons_layout.addWidget(button)
+            button.show()
+            self.visible_buttons.append(button)
+            
+            # 设置透明度效果
+            opacity_effect = QGraphicsOpacityEffect(button)
+            opacity_effect.setOpacity(0)  # 初始完全透明
+            button.setGraphicsEffect(opacity_effect)
+        
+        # 更新翻页按钮状态
+        self.prev_button.setEnabled(self.current_page > 0)
+        self.next_button.setEnabled(self.current_page < total_pages - 1)
+        
+        # 更新页码标签
+        self.page_label.setText(f"{self.current_page + 1}/{total_pages}")
+        
+        # 调整窗口大小
+        self.adjustSize()
+    
+    def prev_page(self):
+        """上一页"""
+        if self.current_page > 0:
+            self.current_page -= 1
+            self.update_page()
+            # 重新播放动画
+            QTimer.singleShot(0, self.prepare_and_play_animation)
+    
+    def next_page(self):
+        """下一页"""
+        total_pages = (len(self.all_buttons) + self.buttons_per_page - 1) // self.buttons_per_page
+        if self.current_page < total_pages - 1:
+            self.current_page += 1
+            self.update_page()
+            # 重新播放动画
+            QTimer.singleShot(0, self.prepare_and_play_animation)
         
     def update_position(self):
         """更新位置（在宠物右侧）"""
@@ -125,7 +270,7 @@ class OptionsPanel(QWidget):
         self.update_position()
         
         # 重新为每个按钮设置透明度效果（确保每次显示都是透明的）
-        for button in self.buttons:
+        for button in self.visible_buttons:
             opacity_effect = QGraphicsOpacityEffect(button)
             opacity_effect.setOpacity(0)  # 初始完全透明
             button.setGraphicsEffect(opacity_effect)
@@ -144,7 +289,7 @@ class OptionsPanel(QWidget):
         
         # 先保存所有按钮的最终位置并设置初始状态
         button_data = []
-        for button in self.buttons:
+        for button in self.visible_buttons:
             # 获取按钮当前位置作为最终位置
             final_pos = button.pos()
             # 计算初始位置（向左偏移15像素）

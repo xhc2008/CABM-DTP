@@ -112,8 +112,8 @@ class BubbleConfig:
 class InputConfig:
     """输入窗口相关配置"""
     # 窗口大小
-    WINDOW_WIDTH = 250
-    WINDOW_HEIGHT = 70
+    WINDOW_WIDTH = 200
+    WINDOW_HEIGHT = 100
     
     # 图片显示配置
     IMAGE_THUMBNAIL_HEIGHT = 80  # 图片缩略图高度
@@ -137,7 +137,7 @@ class OptionsConfig:
     
     # 位置配置
     PANEL_OFFSET_X = -15  # 相对于宠物右侧的X偏移
-    PANEL_OFFSET_Y = 80  # 相对于宠物的Y偏移
+    PANEL_OFFSET_Y = 100  # 相对于宠物的Y偏移
     
     # 按钮配置
     BUTTON_HEIGHT = 7
