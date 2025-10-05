@@ -1,7 +1,7 @@
-from PyQt5.QtWidgets import (QWidget, QLineEdit, QVBoxLayout, 
+from PyQt5.QtWidgets import (QWidget, QTextEdit, QVBoxLayout, 
                              QHBoxLayout, QFrame, QApplication, QLabel)
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QFont, QPixmap
+from PyQt5.QtCore import Qt, pyqtSignal, QSize
+from PyQt5.QtGui import QFont, QPixmap, QTextCursor
 from config import InputConfig
 
 class InputWindow(QWidget):
@@ -19,8 +19,12 @@ class InputWindow(QWidget):
         self.image_label = None    # 图片显示标签
         
         # 动态调整窗口大小
-        self.base_height = InputConfig.WINDOW_HEIGHT
         self.image_height = InputConfig.IMAGE_THUMBNAIL_HEIGHT  # 图片缩略图高度
+        self.min_input_height = 40  # 最小输入框高度（实际可输入区域）
+        self.max_input_height = 200  # 最大输入框高度
+        self.current_input_height = self.min_input_height
+        # 窗口高度 = 输入框高度 + 边框（去掉了之前的多余padding）
+        self.base_height = self.min_input_height + 4  # 只保留2px边框 * 2
         self.setFixedSize(InputConfig.WINDOW_WIDTH, self.base_height)
         
         # 安装全局事件过滤器来检测点击其他地方
@@ -34,17 +38,18 @@ class InputWindow(QWidget):
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setContentsMargins(0, 0, 0, 0)
         
-        # 装饰性外框
+        # 装饰性外框 - 去除多余边距
         self.outer_frame = QFrame()
         self.outer_frame.setStyleSheet("""
             QFrame {
-                background-color: lightblue;
-                border-radius: 12px;
-                border: 2px solid #81D4FA;
+                background-color: white;
+                border-radius: 10px;
+                border: 2px solid #B0BEC5;
             }
         """)
         self.outer_layout = QVBoxLayout(self.outer_frame)
-        self.outer_layout.setContentsMargins(3, 3, 3, 3)
+        self.outer_layout.setContentsMargins(0, 0, 0, 0)
+        self.outer_layout.setSpacing(0)
         
         # 图片显示区域（初始隐藏）
         self.image_label = QLabel()
@@ -52,9 +57,11 @@ class InputWindow(QWidget):
         self.image_label.setStyleSheet("""
             QLabel {
                 background-color: #f0f0f0;
-                border: 1px dashed #ccc;
-                border-radius: 5px;
-                margin: 2px;
+                border: none;
+                border-bottom: 1px solid #e0e0e0;
+                border-radius: 0px;
+                margin: 0px;
+                padding: 5px;
             }
         """)
         self.image_label.setFixedHeight(self.image_height)
@@ -62,47 +69,49 @@ class InputWindow(QWidget):
         self.image_label.mousePressEvent = self.clear_image  # 点击清除图片
         self.outer_layout.addWidget(self.image_label)
         
-        # 内部容器（输入框）
-        self.inner_frame = QFrame()
-        self.inner_frame.setStyleSheet("""
-            QFrame {
-                background-color: white;
-                border-radius: 10px;
-            }
-        """)
-        inner_layout = QHBoxLayout(self.inner_frame)
-        inner_layout.setContentsMargins(10, 8, 10, 8)
-        
-        # 输入框
-        self.input_edit = QLineEdit()
+        # 输入框 - 使用QTextEdit支持多行
+        self.input_edit = QTextEdit()
         self.input_edit.setFont(QFont("Arial", 10))
         self.input_edit.setStyleSheet("""
-            QLineEdit {
-                border: 1px solid #B0BEC5;
-                border-radius: 5px;
-                padding: 5px;
+            QTextEdit {
+                border: none;
+                border-radius: 10px;
+                padding: 10px;
+                background-color: white;
             }
         """)
-        self.input_edit.returnPressed.connect(self.send_message)
         self.input_edit.setPlaceholderText("")
+        self.input_edit.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.input_edit.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.input_edit.setFixedHeight(self.min_input_height)
+        
+        # 连接文本变化信号以动态调整高度
+        self.input_edit.textChanged.connect(self.adjust_input_height)
+        
         # 重写按键事件
         self.input_edit.keyPressEvent = self.handle_key_press
         
-        inner_layout.addWidget(self.input_edit)
-        self.outer_layout.addWidget(self.inner_frame)
+        self.outer_layout.addWidget(self.input_edit)
         self.main_layout.addWidget(self.outer_frame)
         
     def handle_key_press(self, event):
         """处理按键事件"""
         if event.key() == Qt.Key_Escape:
             self.close()
+        elif event.key() in (Qt.Key_Return, Qt.Key_Enter):
+            # Ctrl+Enter 或 Shift+Enter 换行
+            if event.modifiers() & (Qt.ControlModifier | Qt.ShiftModifier):
+                QTextEdit.keyPressEvent(self.input_edit, event)
+            else:
+                # 普通Enter发送消息
+                self.send_message()
         else:
-            QLineEdit.keyPressEvent(self.input_edit, event)
+            QTextEdit.keyPressEvent(self.input_edit, event)
             
     def send_message(self):
         """发送消息"""
         try:
-            message = self.input_edit.text().strip()
+            message = self.input_edit.toPlainText().strip()
             current_image = self.current_image  # 保存当前图片引用
             
             if message or current_image:
@@ -119,6 +128,37 @@ class InputWindow(QWidget):
             traceback.print_exc()
             # 即使出错也要关闭窗口
             self.close()
+    
+    def adjust_input_height(self):
+        """根据内容动态调整输入框高度"""
+        # 获取文档内容的实际高度
+        doc_height = self.input_edit.document().size().height()
+        # 计算需要的高度：文档高度 + padding（上下各10px）
+        content_height = int(doc_height) + 20
+        
+        # 限制在最小和最大高度之间
+        new_height = max(self.min_input_height, min(content_height, self.max_input_height))
+        
+        # 只有当高度变化超过阈值时才调整（避免微小变化导致频繁调整）
+        if abs(new_height - self.current_input_height) > 2:
+            height_diff = new_height - self.current_input_height
+            self.current_input_height = new_height
+            
+            # 调整输入框高度
+            self.input_edit.setFixedHeight(new_height)
+            
+            # 调整窗口总高度
+            current_window_height = self.height()
+            new_window_height = current_window_height + height_diff
+            
+            # 保存当前窗口底部位置
+            old_bottom = self.geometry().bottom()
+            
+            self.setFixedSize(InputConfig.WINDOW_WIDTH, new_window_height)
+            
+            # 向上调整位置，保持底部不变
+            new_y = old_bottom - new_window_height
+            self.move(self.x(), new_y)
         
     def set_image(self, pixmap):
         """设置图片"""
@@ -170,7 +210,19 @@ class InputWindow(QWidget):
     def focus_input(self):
         """聚焦到输入框"""
         self.input_edit.setFocus()
-        self.input_edit.selectAll()  # 选中所有文本方便重新输入
+        # 添加激活状态的发光效果
+        self.outer_frame.setStyleSheet("""
+            QFrame {
+                background-color: white;
+                border-radius: 10px;
+                border: 2px solid #64B5F6;
+                box-shadow: 0 0 10px rgba(100, 181, 246, 0.5);
+            }
+        """)
+        # 选中所有文本
+        cursor = self.input_edit.textCursor()
+        cursor.select(QTextCursor.Document)
+        self.input_edit.setTextCursor(cursor)
         
     def update_position(self):
         """更新位置（跟随宠物）"""
@@ -229,6 +281,17 @@ class InputWindow(QWidget):
         return super().eventFilter(obj, event)
         
     def closeEvent(self, event):
-        """关闭事件 - 移除事件过滤器"""
+        """关闭事件 - 移除事件过滤器，恢复样式"""
         QApplication.instance().removeEventFilter(self)
+        # 恢复未激活状态样式
+        self.outer_frame.setStyleSheet("""
+            QFrame {
+                background-color: white;
+                border-radius: 10px;
+                border: 2px solid #B0BEC5;
+            }
+        """)
+        # 重置输入框高度
+        self.current_input_height = self.min_input_height
+        self.input_edit.setFixedHeight(self.min_input_height)
         super().closeEvent(event)

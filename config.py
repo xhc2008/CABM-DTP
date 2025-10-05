@@ -125,7 +125,7 @@ class InputConfig:
     
     # 窗口位置偏移
     WINDOW_OFFSET_X = -55  # 相对于宠物的X偏移
-    WINDOW_OFFSET_Y = -15  # 相对于宠物的Y偏移
+    WINDOW_OFFSET_Y = -10  # 相对于宠物的Y偏移
 
 
 # 选项栏配置
@@ -136,7 +136,7 @@ class OptionsConfig:
     PANEL_HEIGHT = 100
     
     # 位置配置
-    PANEL_OFFSET_X = -10  # 相对于宠物右侧的X偏移
+    PANEL_OFFSET_X = -15  # 相对于宠物右侧的X偏移
     PANEL_OFFSET_Y = 80  # 相对于宠物的Y偏移
     
     # 按钮配置
