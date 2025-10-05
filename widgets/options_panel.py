@@ -29,7 +29,7 @@ class OptionsPanel(QWidget):
         """设置界面"""
         # 主容器 - 垂直布局
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(20, 0, 0, 0)  # 左边留出20px空间用于动画
+        main_layout.setContentsMargins(0, 0, 0, 0)  # 主布局不设置边距
         main_layout.setSpacing(OptionsConfig.BUTTON_SPACING)
         
         # 按钮样式 - 应用配置
@@ -148,6 +148,13 @@ class OptionsPanel(QWidget):
         page_layout.setContentsMargins(0, 0, 0, 0)
         page_layout.setSpacing(page_button_spacing)
         
+        # 添加左边距以与功能按钮对齐
+        page_controls_wrapper = QWidget()
+        page_controls_wrapper_layout = QHBoxLayout(page_controls_wrapper)
+        page_controls_wrapper_layout.setContentsMargins(20, 0, 0, 0)  # 左边距20px
+        page_controls_wrapper_layout.setSpacing(0)
+        page_controls_wrapper_layout.addWidget(page_controls)
+        
         # 上一页按钮
         self.prev_button = QPushButton("<")
         self.prev_button.setStyleSheet(page_button_style)
@@ -160,12 +167,12 @@ class OptionsPanel(QWidget):
         self.next_button.clicked.connect(self.next_page)
         page_layout.addWidget(self.next_button, 0, Qt.AlignRight)  # 右对齐，不拉伸
         
-        main_layout.addWidget(page_controls)
+        main_layout.addWidget(page_controls_wrapper)
         
         # 创建按钮容器（用于显示当前页的按钮）
         self.buttons_container = QWidget()
         self.buttons_layout = QVBoxLayout(self.buttons_container)
-        self.buttons_layout.setContentsMargins(0, 0, 0, 0)
+        self.buttons_layout.setContentsMargins(20, 0, 0, 0)  # 左边留出20px空间用于功能按钮的滑入动画
         self.buttons_layout.setSpacing(OptionsConfig.BUTTON_SPACING)
         main_layout.addWidget(self.buttons_container)
         
@@ -174,13 +181,22 @@ class OptionsPanel(QWidget):
         self.page_label.setFixedWidth(OptionsConfig.BUTTON_WIDTH + button_extra_width)  # 设置固定宽度，考虑边框和padding
         self.page_label.setAlignment(Qt.AlignCenter)
         self.page_label.setStyleSheet(f"color: #666; font-size: {OptionsConfig.BUTTON_FONT_SIZE}pt;")
-        main_layout.addWidget(self.page_label)
+        
+        # 添加左边距以与功能按钮对齐
+        page_label_wrapper = QWidget()
+        page_label_wrapper_layout = QHBoxLayout(page_label_wrapper)
+        page_label_wrapper_layout.setContentsMargins(20, 0, 0, 0)  # 左边距20px
+        page_label_wrapper_layout.setSpacing(0)
+        page_label_wrapper_layout.addWidget(self.page_label)
+        
+        main_layout.addWidget(page_label_wrapper)
         
         # 显示第一页
         self.update_page()
         
         # 设置固定宽度，高度自适应按钮和间距
-        self.setFixedWidth(OptionsConfig.PANEL_WIDTH + 20)
+        # 宽度 = 按钮宽度 + 边框padding + 功能按钮的动画空间
+        self.setFixedWidth(OptionsConfig.BUTTON_WIDTH + button_extra_width + 20)
         # 让布局自动计算高度
         self.adjustSize()
     
