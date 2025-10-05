@@ -12,12 +12,19 @@ from config import PetConfig
 class SystemTrayManager(QObject):
     """系统托盘管理器"""
     show_requested = pyqtSignal()
+    hide_requested = pyqtSignal()
+    toggle_console_requested = pyqtSignal()
     exit_requested = pyqtSignal()
     
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent_widget = parent
         self.tray_icon = None
+        self.tray_menu = None
+        self.show_hide_action = None
+        self.console_action = None
+        self.is_pet_visible = True
+        self.is_console_visible = True
         self.init_system_tray()
         
     def init_system_tray(self):
@@ -39,8 +46,11 @@ class SystemTrayManager(QObject):
         # 创建托盘菜单
         self._create_tray_menu()
         
-        # 双击托盘图标显示窗口
+        # 双击托盘图标切换显示/隐藏
         self.tray_icon.activated.connect(self._tray_icon_activated)
+        
+        # 始终显示托盘图标
+        self.tray_icon.show()
         
     def _set_tray_icon(self):
         """设置托盘图标"""
@@ -65,28 +75,56 @@ class SystemTrayManager(QObject):
         
     def _create_tray_menu(self):
         """创建托盘菜单"""
-        tray_menu = QMenu()
+        self.tray_menu = QMenu()
         
-        # 显示动作
-        show_action = QAction("显示", self.parent_widget)
-        show_action.triggered.connect(self.show_requested.emit)
-        tray_menu.addAction(show_action)
+        # 显示/隐藏动作（根据当前状态动态变化）
+        self.show_hide_action = QAction("隐藏", self.parent_widget)
+        self.show_hide_action.triggered.connect(self._toggle_show_hide)
+        self.tray_menu.addAction(self.show_hide_action)
+        
+        # 后台窗口显示/隐藏动作
+        self.console_action = QAction("隐藏后台", self.parent_widget)
+        self.console_action.triggered.connect(self._toggle_console)
+        self.tray_menu.addAction(self.console_action)
         
         # 分隔符
-        tray_menu.addSeparator()
+        self.tray_menu.addSeparator()
         
         # 退出动作
         quit_action = QAction("退出", self.parent_widget)
         quit_action.triggered.connect(self.exit_requested.emit)
-        tray_menu.addAction(quit_action)
+        self.tray_menu.addAction(quit_action)
         
         # 设置托盘菜单
-        self.tray_icon.setContextMenu(tray_menu)
+        self.tray_icon.setContextMenu(self.tray_menu)
+        
+    def _toggle_show_hide(self):
+        """切换显示/隐藏"""
+        if self.is_pet_visible:
+            self.hide_requested.emit()
+        else:
+            self.show_requested.emit()
+    
+    def _toggle_console(self):
+        """切换后台窗口显示/隐藏"""
+        self.toggle_console_requested.emit()
         
     def _tray_icon_activated(self, reason):
         """托盘图标激活事件"""
         if reason == QSystemTrayIcon.DoubleClick:
-            self.show_requested.emit()
+            self._toggle_show_hide()
+            
+    def update_menu_state(self, is_visible):
+        """更新菜单状态"""
+        self.is_pet_visible = is_visible
+        if self.show_hide_action:
+            self.show_hide_action.setText("隐藏" if is_visible else "显示")
+    
+    def update_console_menu_state(self, is_visible):
+        """更新后台窗口菜单状态"""
+        self.is_console_visible = is_visible
+        if self.console_action:
+            self.console_action.setText("隐藏后台" if is_visible else "显示后台")
             
     def show_tray_icon(self):
         """显示托盘图标"""

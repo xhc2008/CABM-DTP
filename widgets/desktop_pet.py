@@ -70,6 +70,8 @@ class DesktopPet(QWidget):
         """连接各种信号"""
         # 系统托盘信号
         self.system_tray.show_requested.connect(self.show_from_tray)
+        self.system_tray.hide_requested.connect(self.hide_to_tray)
+        self.system_tray.toggle_console_requested.connect(self.toggle_console_window)
         self.system_tray.exit_requested.connect(self.close_application)
         
         # 事件处理信号
@@ -537,9 +539,6 @@ class DesktopPet(QWidget):
         import os
         import sys
         
-        # 隐藏系统托盘图标
-        self.system_tray.hide_tray_icon()
-            
         # 执行真正的关闭流程
         self._real_close()
         
@@ -557,7 +556,7 @@ class DesktopPet(QWidget):
             self.options_panel.close()
             
     def hide_to_tray(self):
-        """隐藏所有组件到系统托盘"""
+        """隐藏所有组件"""
         try:
             # 隐藏所有窗口组件
             if self.input_window:
@@ -570,44 +569,68 @@ class DesktopPet(QWidget):
             # 隐藏主窗口（桌宠本体）
             self.hide()
             
-            # 显示系统托盘图标
-            self.system_tray.show_tray_icon()
-            self.system_tray.show_message(
-                "桌面宠物",
-                "已隐藏到系统托盘，右键托盘图标可以重新显示"
-            )
+            # 更新托盘菜单状态
+            self.system_tray.update_menu_state(False)
             
-            print("已隐藏到系统托盘")
+            print("已隐藏桌面宠物")
             
         except Exception as e:
-            print(f"隐藏到托盘失败: {e}")
+            print(f"隐藏失败: {e}")
             
     def show_from_tray(self):
-        """从系统托盘恢复显示"""
+        """恢复显示"""
         try:
             # 显示主窗口（桌宠本体）
             self.show()
             self.raise_()
             self.activateWindow()
             
-            # 隐藏系统托盘图标
-            self.system_tray.hide_tray_icon()
+            # 更新托盘菜单状态
+            self.system_tray.update_menu_state(True)
             
-            print("已从系统托盘恢复显示")
+            print("已显示桌面宠物")
             
         except Exception as e:
-            print(f"从托盘恢复显示失败: {e}")
+            print(f"显示失败: {e}")
+    
+    def toggle_console_window(self):
+        """切换后台窗口显示/隐藏"""
+        try:
+            import ctypes
+            import sys
+            
+            # 获取控制台窗口句柄
+            kernel32 = ctypes.windll.kernel32
+            user32 = ctypes.windll.user32
+            
+            # 获取当前进程的控制台窗口
+            console_window = kernel32.GetConsoleWindow()
+            
+            if console_window:
+                # 检查当前是否可见
+                is_visible = user32.IsWindowVisible(console_window)
+                
+                if is_visible:
+                    # 隐藏控制台窗口
+                    user32.ShowWindow(console_window, 0)  # SW_HIDE = 0
+                    self.system_tray.update_console_menu_state(False)
+                    print("后台窗口已隐藏")
+                else:
+                    # 显示控制台窗口
+                    user32.ShowWindow(console_window, 5)  # SW_SHOW = 5
+                    self.system_tray.update_console_menu_state(True)
+                    print("后台窗口已显示")
+            else:
+                print("未找到控制台窗口")
+                
+        except Exception as e:
+            print(f"切换后台窗口失败: {e}")
 
     def closeEvent(self, event):
-        """关闭事件 - 隐藏到托盘而不是退出"""
-        # 如果系统托盘可用，隐藏到托盘
-        if self.system_tray.is_available():
-            self.hide_to_tray()
-            event.ignore()  # 忽略关闭事件，不真正关闭
-        else:
-            # 如果系统托盘不可用，执行正常关闭流程
-            self._real_close()
-            event.accept()
+        """关闭事件 - 隐藏而不是退出"""
+        # 隐藏窗口而不是退出
+        self.hide_to_tray()
+        event.ignore()  # 忽略关闭事件，不真正关闭
             
     def _real_close(self):
         """真正的关闭流程"""
