@@ -78,7 +78,7 @@ class SystemTrayManager(QObject):
         self.tray_menu = QMenu()
         
         # 显示/隐藏动作（根据当前状态动态变化）
-        self.show_hide_action = QAction("隐藏", self.parent_widget)
+        self.show_hide_action = QAction("隐藏桌宠", self.parent_widget)
         self.show_hide_action.triggered.connect(self._toggle_show_hide)
         self.tray_menu.addAction(self.show_hide_action)
         
@@ -118,7 +118,7 @@ class SystemTrayManager(QObject):
         """更新菜单状态"""
         self.is_pet_visible = is_visible
         if self.show_hide_action:
-            self.show_hide_action.setText("隐藏" if is_visible else "显示")
+            self.show_hide_action.setText("隐藏桌宠" if is_visible else "显示桌宠")
     
     def update_console_menu_state(self, is_visible):
         """更新后台窗口菜单状态"""

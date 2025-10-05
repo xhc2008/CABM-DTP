@@ -18,4 +18,10 @@ if %errorLevel% equ 0 (
 )
 
 python main.py
-pause
+
+:: 只在出错时暂停（退出码不为0）
+if %errorLevel% neq 0 (
+    echo.
+    echo Program exited with error code: %errorLevel%
+    pause
+)
