@@ -141,6 +141,13 @@ class OptionsPanel(QWidget):
         demo_button4.clicked.connect(lambda: print("功能4被点击"))
         self.all_buttons.append(demo_button4)
         
+        # 初始化所有按钮：隐藏并设置为透明
+        for button in self.all_buttons:
+            button.hide()  # 先隐藏
+            opacity_effect = QGraphicsOpacityEffect(button)
+            opacity_effect.setOpacity(0)  # 设置为透明
+            button.setGraphicsEffect(opacity_effect)
+        
         # 创建翻页按钮容器（放在最上面）
         page_controls = QWidget()
         page_controls.setFixedWidth(OptionsConfig.BUTTON_WIDTH + button_extra_width)  # 设置固定宽度，考虑边框和padding
@@ -171,9 +178,12 @@ class OptionsPanel(QWidget):
         
         # 创建按钮容器（用于显示当前页的按钮）
         self.buttons_container = QWidget()
+        # 使用配置的面板高度作为按钮容器的固定高度
+        self.buttons_container.setFixedHeight(OptionsConfig.PANEL_HEIGHT)
         self.buttons_layout = QVBoxLayout(self.buttons_container)
         self.buttons_layout.setContentsMargins(20, 0, 0, 0)  # 左边留出20px空间用于功能按钮的滑入动画
         self.buttons_layout.setSpacing(OptionsConfig.BUTTON_SPACING)
+        self.buttons_layout.setAlignment(Qt.AlignTop)  # 顶部对齐，按钮不足时不会居中
         main_layout.addWidget(self.buttons_container)
         
         # 页码标签（放在最下面，单独一行）
@@ -194,10 +204,10 @@ class OptionsPanel(QWidget):
         # 显示第一页
         self.update_page()
         
-        # 设置固定宽度，高度自适应按钮和间距
+        # 设置固定宽度，高度自适应
         # 宽度 = 按钮宽度 + 边框padding + 功能按钮的动画空间
         self.setFixedWidth(OptionsConfig.BUTTON_WIDTH + button_extra_width + 20)
-        # 让布局自动计算高度
+        # 让布局自动计算高度（按钮容器已经有固定高度了）
         self.adjustSize()
     
     def update_page(self):
@@ -218,14 +228,16 @@ class OptionsPanel(QWidget):
         # 添加当前页的按钮
         for i in range(start_idx, end_idx):
             button = self.all_buttons[i]
+            
+            # 确保透明度效果存在且为0
+            opacity_effect = button.graphicsEffect()
+            if opacity_effect:
+                opacity_effect.setOpacity(0)  # 重置为透明
+            
+            # 添加到布局并显示
             self.buttons_layout.addWidget(button)
             button.show()
             self.visible_buttons.append(button)
-            
-            # 设置透明度效果
-            opacity_effect = QGraphicsOpacityEffect(button)
-            opacity_effect.setOpacity(0)  # 初始完全透明
-            button.setGraphicsEffect(opacity_effect)
         
         # 更新翻页按钮状态
         self.prev_button.setEnabled(self.current_page > 0)
@@ -233,9 +245,6 @@ class OptionsPanel(QWidget):
         
         # 更新页码标签
         self.page_label.setText(f"{self.current_page + 1}/{total_pages}")
-        
-        # 调整窗口大小
-        self.adjustSize()
     
     def prev_page(self):
         """上一页"""
@@ -281,18 +290,16 @@ class OptionsPanel(QWidget):
             
     def showEvent(self, event):
         """显示事件 - 确保窗口显示时位置正确并播放动画"""
+        # 在窗口显示之前，先隐藏所有可见按钮（避免闪烁）
+        for button in self.visible_buttons:
+            button.setVisible(False)
+        
         super().showEvent(event)
         # 立即更新位置
         self.update_position()
         
-        # 重新为每个按钮设置透明度效果（确保每次显示都是透明的）
-        for button in self.visible_buttons:
-            opacity_effect = QGraphicsOpacityEffect(button)
-            opacity_effect.setOpacity(0)  # 初始完全透明
-            button.setGraphicsEffect(opacity_effect)
-        
-        # 等待布局完成后再准备动画
-        QTimer.singleShot(0, self.prepare_and_play_animation)
+        # 立即准备动画（会重新显示按钮）
+        self.prepare_and_play_animation()
     
     def prepare_and_play_animation(self):
         """准备初始状态并播放从左到右的淡入动画"""
@@ -306,6 +313,11 @@ class OptionsPanel(QWidget):
         # 先保存所有按钮的最终位置并设置初始状态
         button_data = []
         for button in self.visible_buttons:
+            # 确保透明度为0
+            opacity_effect = button.graphicsEffect()
+            if opacity_effect:
+                opacity_effect.setOpacity(0)
+            
             # 获取按钮当前位置作为最终位置
             final_pos = button.pos()
             # 计算初始位置（向左偏移15像素）
@@ -313,6 +325,8 @@ class OptionsPanel(QWidget):
             button_data.append((button, initial_pos, final_pos))
             # 立即设置到初始位置
             button.move(initial_pos)
+            # 现在可以显示按钮了（已经在正确的初始位置且透明）
+            button.setVisible(True)
         
         # 短暂延迟后开始动画，确保位置设置生效
         QTimer.singleShot(20, lambda: self._start_all_animations(button_data))

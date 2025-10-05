@@ -133,7 +133,7 @@ class OptionsConfig:
     """选项栏相关配置"""
     # 窗口大小
     PANEL_WIDTH = 70
-    PANEL_HEIGHT = 100
+    PANEL_HEIGHT = 70
     
     # 位置配置
     PANEL_OFFSET_X = -15  # 相对于宠物右侧的X偏移
