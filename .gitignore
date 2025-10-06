@@ -5,6 +5,7 @@ node_modules/
 vendor/
 .venv/
 venv/
+env/
 debug/
 1/
 temp/
@@ -16,12 +17,20 @@ test/
 *.o
 *.class
 log.txt
+# PyInstaller 相关
+*.spec
+*.manifest
+*.exe
 # 运行时文件
 *.log
 *.pid
 .env
 .env.local
 .env.production
+
+pet.ico
+build.bat
+setup_venv.bat
 
 # 系统文件
 .DS_Store

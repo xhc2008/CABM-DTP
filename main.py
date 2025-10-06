@@ -40,8 +40,14 @@ def check_and_create_env():
     print("\n" + "="*60)
     print("未检测到 .env 配置文件")
     print("="*60)
-    print("\n首次运行需要配置 API 密钥\n")
-    
+    print("首次运行需要配置 API 密钥")
+    print("\n> 如何获取？")
+    print("1. 使用浏览器打开https://cloud.siliconflow.cn/i/mVqMyTZk")
+    print("2. 注册账号")
+    print("3. 左下方有一个“API密钥”，点击它")
+    print("4. 上方有一个“新建API密钥”，点击它")
+    print("5. 点击“新建密钥”")
+    print("6. 点击密钥进行复制，粘贴到这里")
     # 读取示例文件作为参考
     example_path = Path('.env.example')
     defaults = {}

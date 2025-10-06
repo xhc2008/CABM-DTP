@@ -4,9 +4,6 @@ requests>=2.28.0
 openai>=1.0.0
 pillow>=9.0.0
 pywin32>=300; sys_platform == 'win32'
-# 自动化操作相关依赖（Windows平台）
 pyautogui>=0.9.54; sys_platform == 'win32'
 pyperclip>=1.8.2; sys_platform == 'win32'
-# 向量数据库相关依赖
 numpy>=1.21.0
-tqdm>=4.64.0

@@ -138,25 +138,25 @@ class OptionsPanel(QWidget):
         self.all_buttons.append(self.history_button)
         
         # 临时演示按钮
-        demo_button1 = QPushButton("空白")
-        demo_button1.setStyleSheet(button_style)
-        demo_button1.clicked.connect(lambda: print("功能1被点击"))
-        self.all_buttons.append(demo_button1)
+        # demo_button1 = QPushButton("空白")
+        # demo_button1.setStyleSheet(button_style)
+        # demo_button1.clicked.connect(lambda: print("功能1被点击"))
+        # self.all_buttons.append(demo_button1)
         
-        demo_button2 = QPushButton("空白")
-        demo_button2.setStyleSheet(button_style)
-        demo_button2.clicked.connect(lambda: print("功能2被点击"))
-        self.all_buttons.append(demo_button2)
+        # demo_button2 = QPushButton("空白")
+        # demo_button2.setStyleSheet(button_style)
+        # demo_button2.clicked.connect(lambda: print("功能2被点击"))
+        # self.all_buttons.append(demo_button2)
         
-        demo_button3 = QPushButton("空白")
-        demo_button3.setStyleSheet(button_style)
-        demo_button3.clicked.connect(lambda: print("功能3被点击"))
-        self.all_buttons.append(demo_button3)
+        # demo_button3 = QPushButton("空白")
+        # demo_button3.setStyleSheet(button_style)
+        # demo_button3.clicked.connect(lambda: print("功能3被点击"))
+        # self.all_buttons.append(demo_button3)
         
-        demo_button4 = QPushButton("空白")
-        demo_button4.setStyleSheet(button_style)
-        demo_button4.clicked.connect(lambda: print("功能4被点击"))
-        self.all_buttons.append(demo_button4)
+        # demo_button4 = QPushButton("空白")
+        # demo_button4.setStyleSheet(button_style)
+        # demo_button4.clicked.connect(lambda: print("功能4被点击"))
+        # self.all_buttons.append(demo_button4)
         
         # 初始化所有按钮：隐藏并设置为透明
         for button in self.all_buttons:
