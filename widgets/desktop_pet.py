@@ -251,6 +251,7 @@ class DesktopPet(QWidget):
             self.options_panel.exit_requested.connect(self.close_application)
             self.options_panel.hide_requested.connect(self.hide_to_tray)
             self.options_panel.screenshot_requested.connect(self.start_screenshot)
+            self.options_panel.clear_history_requested.connect(self.clear_conversation_history)
             
         # 更新并显示位置
         self.input_window.update_position()
@@ -466,6 +467,7 @@ class DesktopPet(QWidget):
             self.options_panel.exit_requested.connect(self.close_application)
             self.options_panel.hide_requested.connect(self.hide_to_tray)
             self.options_panel.screenshot_requested.connect(self.start_screenshot)
+            self.options_panel.clear_history_requested.connect(self.clear_conversation_history)
             
         # 更新并显示位置
         self.message_bubble.update_position()
@@ -690,6 +692,33 @@ class DesktopPet(QWidget):
                 
         except Exception as e:
             print(f"切换后台窗口失败: {e}")
+    
+    def clear_conversation_history(self):
+        """清空对话历史"""
+        try:
+            # 清空聊天服务的对话历史
+            self.chat_service.clear_history()
+            
+            # 隐藏当前的消息气泡
+            if self.message_bubble:
+                self.message_bubble.close()
+                self.message_bubble = None
+            
+            # 显示确认消息
+            self.prepare_message_bubble()
+            self.message_bubble.set_text("对话历史已清空")
+            self.message_bubble.update_position()
+            
+            # 3秒后自动隐藏确认消息
+            self.bubble_hide_timer = QTimer()
+            self.bubble_hide_timer.setSingleShot(True)
+            self.bubble_hide_timer.timeout.connect(self.hide_message_bubble)
+            self.bubble_hide_timer.start(3000)
+            
+            print("对话历史已清空")
+            
+        except Exception as e:
+            print(f"清空对话历史失败: {e}")
 
     def closeEvent(self, event):
         """关闭事件 - 隐藏而不是退出"""

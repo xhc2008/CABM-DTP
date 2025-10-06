@@ -9,6 +9,7 @@ class OptionsPanel(QWidget):
     exit_requested = pyqtSignal()  # 退出信号
     hide_requested = pyqtSignal()  # 隐藏信号
     screenshot_requested = pyqtSignal()  # 截图信号
+    clear_history_requested = pyqtSignal()  # 清空对话历史信号
     
     def __init__(self, parent_pet):
         super().__init__()
@@ -119,6 +120,12 @@ class OptionsPanel(QWidget):
         self.exit_button.clicked.connect(self.confirm_exit)
         self.all_buttons.append(self.exit_button)
         
+        # 清空按钮
+        self.clear_button = QPushButton("清空")
+        self.clear_button.setStyleSheet(button_style)
+        self.clear_button.setToolTip("清空对话历史")
+        self.clear_button.clicked.connect(self.confirm_clear_history)
+        self.all_buttons.append(self.clear_button)
         # 临时演示按钮
         demo_button1 = QPushButton("空白")
         demo_button1.setStyleSheet(button_style)
@@ -392,3 +399,16 @@ class OptionsPanel(QWidget):
         
         if reply == QMessageBox.Yes:
             self.exit_requested.emit()
+    
+    def confirm_clear_history(self):
+        """确认清空对话历史对话框"""
+        reply = QMessageBox.question(
+            self, 
+            '确认清空', 
+            '清除上下文，开始新对话？\n这不会影响长期记忆',
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+        
+        if reply == QMessageBox.Yes:
+            self.clear_history_requested.emit()
