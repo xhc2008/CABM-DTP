@@ -41,8 +41,6 @@ VISION_MODEL=Qwen/Qwen2.5-VL-32B-Instruct
 ### 4. 运行应用
 双击`start.bat`启动。启动后可能会有几秒的延迟，不要重复启动
 
-使用`start-debug.bat`启动可以不隐藏后台。建议首次启动时使用这个，确认没问题了再使用`start.bat`
-
 ## 使用方法
 
 1. **左键拖拽**：移动宠物位置
