@@ -7,6 +7,12 @@ from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import QTimer
 from widgets.desktop_pet import DesktopPet
 
+# Windows 控制台标题设置
+if os.name == 'nt':
+    import ctypes
+    kernel32 = ctypes.windll.kernel32
+    kernel32.SetConsoleTitleW("CABM-DTP")
+
 def check_if_in_archive():
     """检查程序是否在压缩包中运行"""
     try:
