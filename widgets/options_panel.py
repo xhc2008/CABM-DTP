@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
 from PyQt5.QtCore import Qt, pyqtSignal, QPropertyAnimation, QEasingCurve, QPoint, QTimer, QSize
 from PyQt5.QtGui import QFont
 from config import OptionsConfig
+from .history_viewer import HistoryViewer
 
 class OptionsPanel(QWidget):
     """选项栏面板"""
@@ -24,6 +25,8 @@ class OptionsPanel(QWidget):
         
         self.current_page = 0  # 当前页码
         self.buttons_per_page = 3  # 每页显示的按钮数
+        
+        self.history_viewer = None  # 历史查看器窗口
         
         self.setup_ui()
         
@@ -126,6 +129,14 @@ class OptionsPanel(QWidget):
         self.clear_button.setToolTip("清空对话历史")
         self.clear_button.clicked.connect(self.confirm_clear_history)
         self.all_buttons.append(self.clear_button)
+        
+        # 历史按钮
+        self.history_button = QPushButton("历史")
+        self.history_button.setStyleSheet(button_style)
+        self.history_button.setToolTip("查看历史记录")
+        self.history_button.clicked.connect(self.show_history)
+        self.all_buttons.append(self.history_button)
+        
         # 临时演示按钮
         demo_button1 = QPushButton("空白")
         demo_button1.setStyleSheet(button_style)
@@ -412,3 +423,12 @@ class OptionsPanel(QWidget):
         
         if reply == QMessageBox.Yes:
             self.clear_history_requested.emit()
+    
+    def show_history(self):
+        """显示历史记录窗口"""
+        if self.history_viewer is None:
+            self.history_viewer = HistoryViewer()
+        
+        self.history_viewer.show()
+        self.history_viewer.raise_()
+        self.history_viewer.activateWindow()

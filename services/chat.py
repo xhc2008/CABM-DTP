@@ -20,6 +20,19 @@ class ChatService:
         self.model = model
         self.conversation_history: List[Dict[str, str]] = []
         
+        # 历史记录文件
+        self.history_file = "data/history.jsonl"
+        self._ensure_history_file()
+        
+        # 当前对话的临时记录
+        self.current_conversation = {
+            "timestamp": "",
+            "user_input": "",
+            "ai_response": "",
+            "tool_calls": [],
+            "tool_responses": []
+        }
+        
         # 动态注册tools/目录下的所有工具
         self.available_tools = {}
         self.tools = []
@@ -274,6 +287,15 @@ class ChatService:
 
     def process_message_stream(self, user_message: str) -> Iterator[str]:
         """处理用户消息并返回流式AI回复"""
+        # 初始化当前对话记录
+        self.current_conversation = {
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "user_input": user_message,
+            "ai_response": "",
+            "tool_calls": [],
+            "tool_responses": []
+        }
+        
         # 添加用户消息到历史
         self.add_message("user", user_message)
         
@@ -312,6 +334,7 @@ class ChatService:
                 if 'delta' in choice and 'content' in choice['delta'] and choice['delta']['content']:
                     content = choice['delta']['content']
                     full_content += content
+                    self.current_conversation['ai_response'] += content
                     yield content
                 
                 # 处理工具调用
@@ -356,6 +379,9 @@ class ChatService:
                 # 将工具调用转换为列表
                 tool_calls_list = [tool_calls[i] for i in sorted(tool_calls.keys())]
                 
+                # 记录工具调用
+                self.current_conversation['tool_calls'].extend(tool_calls_list)
+                
                 # 添加助手消息到历史（包含工具调用）
                 tool_call_message = {
                     "role": "assistant",
@@ -392,11 +418,15 @@ class ChatService:
                         # 如果工具返回的不是字典，转换为字符串
                         content = str(tool_result)
                     
-                    tool_responses.append({
+                    tool_response = {
                         "role": "tool",
                         "tool_call_id": tool_call['id'],
                         "content": content
-                    })
+                    }
+                    tool_responses.append(tool_response)
+                
+                # 记录工具响应
+                self.current_conversation['tool_responses'].extend(tool_responses)
                 
                 # 添加工具响应到消息列表
                 messages.extend(tool_responses)
@@ -418,6 +448,9 @@ class ChatService:
         # 如果达到最大工具调用次数，返回提示
         if tool_call_count >= max_tool_calls:
             yield "\n已达到最大工具调用次数，对话结束。"
+        
+        # 对话完成后，保存历史记录
+        self._save_conversation_history()
         
         # 对话完成后，异步调用总结功能
         # 获取最终的助手回复（可能包含多轮工具调用的结果）
@@ -518,3 +551,23 @@ class ChatService:
         except Exception as e:
             # 静默处理总结失败，不影响主要对话流程
             print(f"总结对话时出错: {e}")
+    
+    def _ensure_history_file(self):
+        """确保历史记录文件存在"""
+        os.makedirs(os.path.dirname(self.history_file), exist_ok=True)
+        if not os.path.exists(self.history_file):
+            with open(self.history_file, 'w', encoding='utf-8') as f:
+                pass  # 创建空文件
+    
+    def _save_conversation_history(self):
+        """保存当前对话到历史记录文件"""
+        try:
+            # 只保存有实际内容的对话
+            if not self.current_conversation.get('user_input') or not self.current_conversation.get('ai_response'):
+                return
+            
+            with open(self.history_file, 'a', encoding='utf-8') as f:
+                json.dump(self.current_conversation, f, ensure_ascii=False)
+                f.write('\n')
+        except Exception as e:
+            print(f"保存历史记录失败: {e}")
