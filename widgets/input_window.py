@@ -210,13 +210,12 @@ class InputWindow(QWidget):
     def focus_input(self):
         """聚焦到输入框"""
         self.input_edit.setFocus()
-        # 添加激活状态的发光效果
+        # 添加激活状态的边框高亮效果
         self.outer_frame.setStyleSheet("""
             QFrame {
                 background-color: white;
                 border-radius: 10px;
                 border: 2px solid #64B5F6;
-                box-shadow: 0 0 10px rgba(100, 181, 246, 0.5);
             }
         """)
         # 选中所有文本
