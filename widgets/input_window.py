@@ -141,15 +141,16 @@ class InputWindow(QWidget):
         
         # 只有当高度变化超过阈值时才调整（避免微小变化导致频繁调整）
         if abs(new_height - self.current_input_height) > 2:
-            height_diff = new_height - self.current_input_height
             self.current_input_height = new_height
             
             # 调整输入框高度
             self.input_edit.setFixedHeight(new_height)
             
-            # 调整窗口总高度
-            current_window_height = self.height()
-            new_window_height = current_window_height + height_diff
+            # 直接计算窗口总高度（而不是累加差值，避免隐藏再显示后累积误差）
+            # 窗口高度 = 输入框高度 + 边框(4px) + 图片区域（如果有）
+            new_window_height = new_height + 4
+            if self.image_label.isVisible():
+                new_window_height += self.image_height + 10
             
             # 保存当前窗口底部位置
             old_bottom = self.geometry().bottom()
@@ -239,6 +240,16 @@ class InputWindow(QWidget):
     def showEvent(self, event):
         """显示事件 - 确保窗口显示时位置正确"""
         super().showEvent(event)
+        # 强制重新计算输入框高度（解决隐藏再显示后高度不正确的问题）
+        if self.input_edit.toPlainText().strip():
+            # 有内容时，强制重新计算高度
+            self.current_input_height = 0  # 强制触发调整
+            self.adjust_input_height()
+        else:
+            # 空文本时，确保使用最小高度
+            self.current_input_height = self.min_input_height
+            self.input_edit.setFixedHeight(self.min_input_height)
+            self.setFixedSize(InputConfig.WINDOW_WIDTH, self.base_height)
         # 立即更新位置
         self.update_position()
         
@@ -290,7 +301,12 @@ class InputWindow(QWidget):
                 border: 2px solid #B0BEC5;
             }
         """)
-        # 重置输入框高度
+        # 重置输入框高度和窗口高度
         self.current_input_height = self.min_input_height
         self.input_edit.setFixedHeight(self.min_input_height)
+        # 重置窗口高度（考虑是否有图片）
+        if self.image_label.isVisible():
+            self.setFixedSize(InputConfig.WINDOW_WIDTH, self.base_height + self.image_height + 10)
+        else:
+            self.setFixedSize(InputConfig.WINDOW_WIDTH, self.base_height)
         super().closeEvent(event)
