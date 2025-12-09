@@ -68,12 +68,9 @@ VISION_MODEL=Qwen/Qwen2.5-VL-32B-Instruct
 - 目前仅支持单宠物实例运行，多实例可能会导致混乱
 - 本项目仅支持Windows。理论上也支持Windows以外的操作系统，但大概率不行
 
-## 贡献
-目前可能不太会接受Pull Requests
-
 ## 许可证
 
-[GPL-3.0](LICENSE)
+[MIT](LICENSE)
 
 ## CABM
 > ### Code Afflatus & Beyond Matter
